@@ -1,0 +1,109 @@
+{
+  "storia": {
+    "nome": "Il Caffè di Pontevecchio",
+    "premessa": "Marco, un giovane scrittore in crisi, torna nella città universitaria che aveva lasciato dieci anni fa senza salutare nessuno. Dietro il bancone del Caffè di Pontevecchio ritrova Sofia, la ragazza che gli ha girato intorno per un semestre intero e che non gli ha mai perdonato la partenza.",
+    "tono": "realistico, intimista, con dialoghi vivaci e un filo di malinconia"
+  },
+  "personaggi": [
+    {
+      "id": "sofia",
+      "nome": "Sofia",
+      "descrizione": "29 anni, barista e co-proprietaria del Caffè di Pontevecchio insieme alla sorella Elena. Legge tutto ciò che capita, sogna una libreria-caffè.",
+      "personalita": "ironica ma riservata, diffidente con chi la ferisce, sotto la scorta c'è molto calore",
+      "aspetto": "capelli scuri raccolti in una matassa, occhi vivaci, grembiule macchiato di caffè",
+      "stato_animo": "sorpreso e un po' cupo: Marco è tornato dopo dieci anni",
+      "relazioni": {
+        "Marco": "l'uomo che se n'è andato senza salutare; incuriosita ma diffidente, non lo perdona facilmente",
+        "Elena": "sorella maggiore, un rapporto di scherzi e protezione"
+      },
+      "fatti_chiave": [
+        "Marco è sparito dieci anni fa senza salutare, appena finito l'università",
+        "Sofia tiene ancora sul bancone il primo libro pubblicato da Marco",
+        "il festival letterario è a due settimane e il caffè sarà il palco principale"
+      ]
+    },
+    {
+      "id": "elena",
+      "nome": "Elena",
+      "descrizione": "33 anni, sorella maggiore di Sofia, gestisce con lei il caffè. Concretissima, il contrario di Sofia.",
+      "personalita": "diretta, franca, sempre pronta a spingere Sofia a farsi avanti",
+      "aspetto": "alta, capelli corti, sempre con il quaderno delle ore lavorate in tasca",
+      "stato_animo": "",
+      "relazioni": {
+        "Sofia": "sorella minore, protettiva e invadente quanto serve",
+        "Marco": "non gli ha mai digerito la partenza, ma quando è entrato al caffè ha lasciato intendere che 'è tardi per far finta di niente'"
+      },
+      "fatti_chiave": [
+        "sa che Sofia ha conservato il libro di Marco per dieci anni"
+      ]
+    },
+    {
+      "id": "dario",
+      "nome": "Dario",
+      "descrizione": "Amico di vecchia data di Marco, suona in un trio jazz nei locali della città. Il primo con cui Marco è tornato in contatto.",
+      "personalita": "solare, chiacchierino, con l'intuito furbo di chi ha visto tutto",
+      "aspetto": "basso, barba trascurata, sempre con le dita con cui batte il tempo",
+      "stato_animo": "",
+      "relazioni": {
+        "Marco": "amico fraterno, organizza le serate in cui Marco potrebbe leggere i suoi testi"
+      },
+      "fatti_chiave": [
+        "ha saputo prima di tutti del ritorno di Marco",
+        "ha promesso a Sofia di 'spillare' Marco per capire perché è tornato"
+      ]
+    }
+  ],
+  "luoghi": [
+    {
+      "id": "caffe_pontevecchio",
+      "nome": "Caffè di Pontevecchio",
+      "descrizione": "Un caffè antico con tapparelle leggendarie e un bancone in legno consumato; le pareti sono piene di foto in bianco e nero della città. È il salotto della città universitaria.",
+      "atmosfera": "odore di caffè torrefatto, vecchi dischi jazz, luce calda da fine pomeriggio"
+    },
+    {
+      "id": "piazza_vasari",
+      "nome": "Piazza Vasari",
+      "descrizione": "La piazza dove tutti si incrociano: banchi del mercato, studenti al sole, il cinema storico su un lato.",
+      "atmosfera": "rumore vivace, campanile che conta i quarti d'ora"
+    },
+    {
+      "id": "appartamento_marco",
+      "nome": "Appartamento di Marco",
+      "descrizione": "Sottotetto affittato per l'inverno: casse ancora chiuse, macchina da scrivere ereditata, una finestra sui tetti.",
+      "atmosfera": "polvere, silenzio, gabbiani al tramonto"
+    }
+  ],
+  "eventi": [
+    {
+      "id": "la_partenza_senza_addio",
+      "titolo": "La partenza senza addio",
+      "descrizione": "Dieci anni fa Marco se n'è andato dalla città appena finito l'esame finale, senza salutare Sofia e senza spiegazioni.",
+      "stato": "passato",
+      "conseguenze": [
+        "Sofia non lo ha mai perdonato del tutto",
+        "Dario è l'unico che abbia mai ricevuto una lettera"
+      ]
+    },
+    {
+      "id": "il_ritorno",
+      "titolo": "Il ritorno di Marco",
+      "descrizione": "Marco è tornato in città e questa mattina è entrato al Caffè di Pontevecchio, dopo dieci anni.",
+      "stato": "in_corso",
+      "conseguenze": []
+    },
+    {
+      "id": "festival_letterario",
+      "titolo": "Festival letterario d'autunno",
+      "descrizione": "Il festival della città, tra due settimane: il caffè ospiterà le letture del giovedì. Dario vorrebbe far leggere i racconti di Marco.",
+      "stato": "pianificato",
+      "conseguenze": []
+    }
+  ],
+  "scena": {
+    "luogo": "caffe_pontevecchio",
+    "presente": ["sofia"],
+    "situazione": "Tardo pomeriggio di ottobre, pochi clienti. Sofia pulisce il bancone e non ha ancora alzato del tutto gli occhi verso Marco."
+  },
+  "versione": 1,
+  "aggiornato_il": "2026-10-30 12:00:00"
+}

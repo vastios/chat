@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Chat Locale AI — i tuoi personaggi, offline</title>
+  <link rel="stylesheet" href="stile.css">
+</head>
+<body>
+
+  <!-- ================= VISTA BENVENUTO ================= -->
+  <section id="vista-benvenuto" class="vista">
+    <header class="benvenuto-testa">
+      <div class="logo">♥</div>
+      <h1>Chat Locale AI</h1>
+      <p class="sottotitolo">I tuoi personaggi, la tua memoria, tutto sul tuo PC — senza internet.</p>
+      <div id="stato-salute" class="salute">Controllo di Ollama…</div>
+    </header>
+
+    <main class="griglia-storie">
+      <div id="lista-storie" class="lista-storie"><!-- riempito da JS --></div>
+      <button id="bottone-nuova-storia" class="card nuova-storia">
+        <span class="piu">＋</span>
+        <strong>Nuova storia</strong>
+        <span class="mini">Crea personaggi, luoghi e la tua premessa</span>
+      </button>
+    </main>
+  </section>
+
+  <!-- ================= MODALE NUOVA STORIA ================= -->
+  <div id="modale-storia" class="modale-nascosta">
+    <div class="modale">
+      <h2>Nuova storia</h2>
+      <label>Nome della storia *
+        <input id="ns-nome" type="text" placeholder="Es. Il ritorno a Pontevecchio" maxlength="80">
+      </label>
+      <label>Premessa
+        <textarea id="ns-premessa" rows="3" placeholder="Di cosa parla? Es. Marco torna nella città dove ha studiato e ritrova una vecchia fiamma…"></textarea>
+      </label>
+      <label>Tono
+        <input id="ns-tono" type="text" placeholder="Es. realistico, intimista, con dialoghi vivaci" maxlength="120">
+      </label>
+      <label>Situazione iniziale
+        <input id="ns-situazione" type="text" placeholder="Es. Un pomeriggio di ottobre, il caffè è quasi vuoto" maxlength="200">
+      </label>
+
+      <h3>Primo personaggio</h3>
+      <div class="riga-doppia">
+        <label>Nome *
+          <input id="ns-pnome" type="text" placeholder="Es. Sofia" maxlength="60">
+        </label>
+        <label>Aspetto
+          <input id="ns-paspetto" type="text" placeholder="Es. 29 anni, capelli scuri, occhi vivaci" maxlength="120">
+        </label>
+      </div>
+      <label>Descrizione
+        <textarea id="ns-pdescrizione" rows="2" placeholder="Chi è: lavoro, passato, cosa vuole…"></textarea>
+      </label>
+      <label>Carattere
+        <input id="ns-ppersonalita" type="text" placeholder="Es. ironica ma riservata, diffidente con chi la ferisce" maxlength="200">
+      </label>
+
+      <div class="azioni-modale">
+        <button id="ns-annulla" class="secondario">Annulla</button>
+        <button id="ns-crea" class="primario">Crea e inizia</button>
+      </div>
+      <p id="ns-errore" class="errore"></p>
+    </div>
+  </div>
+
+  <!-- ================= VISTA CHAT ================= -->
+  <section id="vista-chat" class="vista nascosta">
+    <aside class="pannello-sinistra">
+      <button id="bottone-torna" class="torna">← Le mie storie</button>
+      <h2 id="titolo-storia" class="titolo-storia"></h2>
+      <p id="desc-storia" class="desc-storia"></p>
+
+      <h3 class="intest-sezione">Personaggi</h3>
+      <div id="lista-personaggi" class="lista-personaggi"><!-- riempito da JS --></div>
+      <button id="bottone-narratore" class="selettore-narratore">📖 <span>Narratore</span>
+        <small>Storia a più voci</small>
+      </button>
+
+      <div class="azioni-sinistra">
+        <button id="bottone-memoria" class="secondario largo">🧠 Memoria della storia</button>
+        <button id="bottone-elimina" class="pericolo largo">🗑 Elimina storia</button>
+      </div>
+    </aside>
+
+    <main class="colonna-chat">
+      <header class="testa-chat">
+        <div id="avatar-attivo" class="avatar grande">?</div>
+        <div>
+          <div id="nome-attivo" class="nome-attivo">Narratore</div>
+          <div id="stato-modello" class="stato-modello">…</div>
+        </div>
+      </header>
+
+      <div id="messaggi" class="messaggi"><!-- riempito da JS --></div>
+
+      <div id="indicatore-archivista" class="indicatore-arch nascosta">🧠 L'archivista sta aggiornando la memoria…</div>
+
+      <footer class="barra-input">
+        <textarea id="input-testo" rows="1" placeholder="Scrivi qui… (Invio per inviare)"></textarea>
+        <button id="bottone-invia" class="invia" title="Invia">➤</button>
+      </footer>
+    </main>
+
+    <!-- Pannello memoria a scomparsa -->
+    <aside id="pannello-memoria" class="pannello-memoria nascosta">
+      <div class="testa-memoria">
+        <h3>🧠 Memoria della storia</h3>
+        <button id="chiudi-memoria" class="secondario">✕ Chiudi</button>
+      </div>
+      <p class="nota-memoria">
+        Questa memoria vive in <code>dati/storie/<span id="percorso-storia"></span>/stato.json</code>.
+        L'archivista la aggiorna da solo dopo ogni scambio; le versioni precedenti finiscono in <code>history/</code>.
+      </p>
+      <div id="contenuto-memoria" class="contenuto-memoria"><!-- riempito da JS --></div>
+    </aside>
+  </section>
+
+  <!-- Toast memoria aggiornata -->
+  <div id="toast" class="toast nascosta">
+    <div id="toast-testo" class="toast-testo"></div>
+    <button id="toast-annulla" class="secondario mini-bottone">Annulla</button>
+    <button id="toast-chiudi" class="chiudi-toast">✕</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

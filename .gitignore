@@ -1,0 +1,9 @@
+# Ambiente virtuale e cache Python
+venv/
+__pycache__/
+*.pyc
+
+# Dati personali generati in uso (la demo resta nel repo)
+dati/storie/*/history/
+dati/storie/*/archivista_log.jsonl
+dati/storie/_eliminata_*/
