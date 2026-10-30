@@ -73,7 +73,7 @@ async function mostraBenvenuto() {
       const badgePers = b.querySelector(".badge-riga .badge:nth-child(1) span");
       const badgeMsg = b.querySelector(".badge-riga .badge:nth-child(2) span");
       badgePers.textContent = `${s.n_personaggi} personaggi`;
-      badgeMsg.textContent = `${s.n_messaggi} messaggi`;
+      badgeMsg.textContent = s.n_messaggi === 1 ? "1 messaggio" : `${s.n_messaggi} messaggi`;
       b.addEventListener("click", () => apriStoria(s.id));
       contenitore.appendChild(b);
     }
