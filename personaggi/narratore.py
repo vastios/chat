@@ -9,11 +9,12 @@ niente più frasi hardcodate su un PNG specifico, tutto passa dalla scheda
 e dalla memoria del personaggio corrente.
 """
 
+from personaggi import lmstudio, personaggio
 from personaggi import memoria as modulo_memoria
-from personaggi import ollama, personaggio
 from config import (
     LIMITE_FIDUCIA_SEGRETO,
     MAX_PAROLE_RISPOSTA,
+    MAX_TOKENS_ATTORE,
     MESSAGGI_CONTESTO,
     MODELLO_ATTORE,
     PROMPT_ATTORE,
@@ -36,7 +37,7 @@ def costruisci_prompt_sistema(scheda, memoria, nome_utente=""):
 
 
 def messaggi_per_modello(scheda, memoria, conversazione, nome_utente=""):
-    """Cronologia recente nel formato che Ollama si aspetta."""
+    """Cronologia recente nel formato OpenAI che LM Studio si aspetta."""
     messaggi = [{
         "role": "system",
         "content": costruisci_prompt_sistema(scheda, memoria, nome_utente),
@@ -52,8 +53,9 @@ def messaggi_per_modello(scheda, memoria, conversazione, nome_utente=""):
 def genera_risposta(scheda, memoria, conversazione, nome_utente=""):
     """Generatore: restituisce la risposta del personaggio a pezzi."""
     messaggi = messaggi_per_modello(scheda, memoria, conversazione, nome_utente)
-    yield from ollama.stream_pezzi(
+    yield from lmstudio.stream_pezzi(
         messaggi,
         modello=MODELLO_ATTORE,
         temperatura=TEMPERATURA_ATTORE,
+        max_tokens=MAX_TOKENS_ATTORE,
     )

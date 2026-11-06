@@ -4,7 +4,7 @@ Struttura del pacchetto:
 - database.py    : archivio su file JSON (al posto di SQLite)
 - personaggio.py : la scheda canonica del personaggio (identità)
 - memoria.py     : umore, situazione, relazione e ricordi, con log e annulla
-- ollama.py      : comunicazione con Ollama
+- lmstudio.py    : comunicazione con LM Studio (API OpenAI-compatibile)
 - narratore.py   : costruisce il prompt e genera le risposte in streaming
 - archivista.py  : aggiorna la memoria in background dopo ogni scambio
 """

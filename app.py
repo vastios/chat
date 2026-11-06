@@ -10,12 +10,12 @@ Avvio:  streamlit run app.py
 
 import streamlit as st
 
-from config import MODELLO_ARCHIVISTA, MODELLO_ATTORE, OLLAMA_URL
+from config import MODELLO_ARCHIVISTA, MODELLO_ATTORE, BASE_URL
 from personaggi import archivista, database
 from personaggi import memoria as modulo_memoria
 from personaggi import narratore
 from personaggi import personaggio as modulo_personaggio
-from personaggi.ollama import ErroreOllama, attivo
+from personaggi.lmstudio import ErroreLMStudio, attivo
 
 st.set_page_config(
     page_title="Chat Personaggi",
@@ -117,12 +117,13 @@ def id_personaggio_corrente():
 
 with st.sidebar:
     st.title("💬 Chat Personaggi")
-    st.caption("Chat locale con personaggi AI · memoria su JSON · Ollama")
+    st.caption("Chat locale con personaggi AI · memoria su JSON · LM Studio")
 
     if not attivo():
         st.warning(
-            "Ollama non risponde su " + OLLAMA_URL + ". "
-            "Avvia Ollama (menu Start o comando 'ollama serve') e ricarica la pagina."
+            "LM Studio non risponde su " + BASE_URL + ". "
+            "Apri LM Studio, carica un modello e avvia il server locale "
+            "(scheda Developer → Start Server), poi ricarica la pagina."
         )
 
     lista = database.lista_personaggi()
@@ -171,7 +172,7 @@ with st.sidebar:
                                 nome, scheda, origine="ia", saluto=saluto
                             ))
                             st.rerun()
-                        except (ErroreOllama, modulo_personaggio.ErroreCreazione) as errore:
+                        except (ErroreLMStudio, modulo_personaggio.ErroreCreazione) as errore:
                             st.error(str(errore))
         else:
             with st.form("form_personaggio_manuale"):
@@ -271,7 +272,8 @@ with st.sidebar:
     st.session_state.archivista_attivo = st.toggle(
         "Memoria automatica (archivista)",
         value=st.session_state.archivista_attivo,
-        help=f"Dopo ogni scambio, il modello {MODELLO_ARCHIVISTA} aggiorna umore, "
+        help="Dopo ogni scambio, "
+             f"il modello {MODELLO_ARCHIVISTA or 'caricato in LM Studio'} aggiorna umore, "
              "situazione, fiducia e ricordi. Puoi disattivarlo e gestire tutto a mano.",
     )
 
@@ -298,7 +300,9 @@ with st.sidebar:
             st.rerun()
 
     st.caption(
-        f"Modelli: attore `{MODELLO_ATTORE}` · archivista `{MODELLO_ARCHIVISTA}`"
+        "Modelli: attore "
+        f"`{MODELLO_ATTORE or 'automatico'}` · archivista "
+        f"`{MODELLO_ARCHIVISTA or 'automatico'}` · server LM Studio `{BASE_URL}`"
     )
 
 
@@ -342,7 +346,7 @@ if prompt:
                     scheda_fresca, memoria_fresca, conversazione_fresca, nome_utente
                 )
             )
-        except ErroreOllama as errore:
+        except ErroreLMStudio as errore:
             st.error(str(errore))
             st.stop()
 

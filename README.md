@@ -5,7 +5,7 @@ stessa struttura a moduli, ma il prodotto non è più un gioco di ruolo fantasy 
 è una chat di personaggi (stile Rosytalk) con una **memoria viva su file JSON**
 che l'IA aggiorna da sola dopo ogni scambio.
 
-Tutto gira sul tuo computer: **Python + Streamlit + Ollama**. Nessun dato esce di casa.
+Tutto gira sul tuo computer: **Python + Streamlit + LM Studio**. Nessun dato esce di casa.
 
 ---
 
@@ -18,7 +18,7 @@ Tutto gira sul tuo computer: **Python + Streamlit + Ollama**. Nessun dato esce d
 | `game/database.py` — SQLite | `personaggi/database.py` — **archivio JSON** |
 | `game/character.py` + `npcs.py` — scheda RPG e PNG | `personaggi/personaggio.py` — scheda identità del personaggio |
 | *ricordi e fiducia aggiornati a mano* | `personaggi/memoria.py` — ricordi, fiducia, umore con log e annulla |
-| `game/narrator.py` — LM Studio | `personaggi/narratore.py` — prompt e streaming |
+| `game/narrator.py` — LM Studio | `personaggi/lmstudio.py` — **stesso collegamento, identico**; `personaggi/narratore.py` — prompt e streaming |
 | *assente (mai collegato)* | `personaggi/archivista.py` — **aggiorna la memoria da solo** |
 | `game/world.py`, `combat.py`, `inventory.py` | *rimossi: niente RPG (per ora)* |
 
@@ -40,18 +40,22 @@ dati/
       log_memoria.jsonl        stato precedente a ogni modifica → "Annulla" sempre possibile
 ```
 
-**La memoria si aggiorna da sola**: dopo ogni tua risposta, il modello leggero
-(`qwen2.5:3b`) rilegge lo scambio e aggiorna umore, situazione, fiducia e ricordi.
+**La memoria si aggiorna da sola**: dopo ogni tua risposta, il modello caricato
+in LM Studio (o uno più leggero, a tua scelta) rilegge lo scambio e aggiorna
+umore, situazione, fiducia e ricordi.
 Ogni modifica è visibile nel pannello 🧠 e puoi annullarla con un clic.
 Puoi anche disattivare l'aggiornamento automatico e scrivere i ricordi a mano.
 
 ## Installazione (Windows)
 
 1. Installa [Python](https://www.python.org/downloads/) (spunta *Add Python to PATH*)
-   e [Ollama](https://ollama.com).
-2. Fai doppio clic su **`1_installazione.bat`**: crea l'ambiente virtuale, installa
-   Streamlit e scarica i due modelli (la prima volta scarica ~7 GB, poi più nulla).
-3. Fai doppio clic su **`2_avvia.bat`**: parte Ollama e si apre la pagina nel browser.
+   e [LM Studio](https://lmstudio.ai).
+2. Fai doppio clic su **`1_installazione.bat`**: crea l'ambiente virtuale e installa
+   Streamlit.
+3. In LM Studio: cerca e scarica un modello (consigliato **Qwen2.5 7B Instruct**,
+   quantizzazione q4_K_M, ~4,7 GB), caricalo e avvia il server locale dalla scheda
+   **Developer → Start Server** (porta 1234).
+4. Fai doppio clic su **`2_avvia.bat`**: si apre la pagina nel browser.
 
 Da terminale (Linux/Mac o se preferisci i comandi):
 
@@ -59,9 +63,8 @@ Da terminale (Linux/Mac o se preferisci i comandi):
 python -m venv venv
 venv\Scripts\activate        # Windows   (Linux/Mac: source venv/bin/activate)
 pip install -r requirements.txt
-ollama pull qwen2.5:7b-instruct-q4_K_M
-ollama pull qwen2.5:3b-instruct-q4_K_M
 streamlit run app.py
+# serve LM Studio avviato: modello caricato e server locale attivo (porta 1234)
 ```
 
 ## Come si usa
@@ -83,16 +86,18 @@ progetto, finalmente collegata al modello.
 
 ## Personalizzazioni
 
-Tutte in `config.py` (o con variabili d'ambiente): modelli, temperatura,
-quanti messaggi/ricordi entrano nel contesto, lunghezza delle risposte.
+Tutte in `config.py` (o con variabili d'ambiente): indirizzo del server LM Studio
+(`LMSTUDIO_URL`), modelli per attore e archivista (vuoti = modello caricato, come
+nel vecchio progetto), temperatura, quanti messaggi/ricordi entrano nel contesto,
+lunghezza delle risposte.
 
 ## Problemi comuni
 
 | Problema | Soluzione |
 |---|---|
-| "Ollama non risponde" | Avvia Ollama dal menu Start, o `ollama serve`, e ricarica la pagina |
-| "Il modello non è installato" | `ollama pull qwen2.5:7b-instruct-q4_K_M` |
-| Risposte lentissime | Normale su CPU (5-10 parole/sec): prova un modello più piccolo con `set MODELLO_ATTORE=qwen2.5:3b-instruct-q4_K_M` prima di avviare |
+| "LM Studio non risponde" | Apri LM Studio e premi **Start Server** nella scheda Developer, poi ricarica la pagina |
+| "Nessun modello caricato" | In LM Studio scarica e carica un modello (es. **Qwen2.5 7B Instruct**) |
+| Risposte lentissime | Normale su CPU (5-10 parole/sec): carica in LM Studio un modello più leggero (es. **Qwen2.5 3B Instruct**) |
 | Ho sbagliato a creare un personaggio | Pannello 🪪 → Modifica la scheda; o eliminalo con 🗑️ |
 | La memoria ha fatto un pasticcio | Bottone ↩️ *Annulla ultima modifica della memoria* |
 

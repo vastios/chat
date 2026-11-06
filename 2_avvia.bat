@@ -9,12 +9,14 @@ if not exist venv (
     exit /b 1
 )
 
-rem Se Ollama non e in esecuzione, lo avvio ridotto a icona
-tasklist /FI "IMAGENAME eq ollama.exe" 2>nul | find /I "ollama.exe" >nul
+rem Se il server di LM Studio non risponde, avviso ma parto comunque
+curl -s -m 3 http://localhost:1234/v1/models >nul 2>nul
 if errorlevel 1 (
-    echo Avvio Ollama in background...
-    start "Ollama" /MIN cmd /c "ollama serve"
-    timeout /t 3 /nobreak >nul
+    echo [ATTENZIONE] LM Studio non risponde sulla porta 1234.
+    echo Apri LM Studio, carica un modello e premi Start Server
+    echo nella scheda Developer, altrimenti i personaggi non potranno
+    echo rispondere.
+    echo.
 )
 
 call venv\Scripts\activate.bat

@@ -1,7 +1,7 @@
 """Configurazione di Chat Personaggi.
 
 Tutti i valori possono essere sovrascritti con variabili d'ambiente,
-ad esempio:  set MODELLO_ATTORE=qwen2.5:3b-instruct-q4_K_M
+ad esempio:  set LMSTUDIO_URL=http://localhost:1234/v1
 """
 
 import os
@@ -17,19 +17,26 @@ PERSONAGGI_DIR = DATI_DIR / "personaggi"
 ELIMINATI_DIR = DATI_DIR / "_eliminati"            # personaggi cestinati, non persi
 
 # ---------------------------------------------------------------------------
-# Ollama
+# LM Studio (come nel vecchio LocalStoryEngine)
 # ---------------------------------------------------------------------------
 
-OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+# Indirizzo del server locale di LM Studio: scheda Developer → Start Server.
+BASE_URL = os.environ.get("LMSTUDIO_URL", "http://localhost:1234/v1")
 
-# Modello che interpreta il personaggio (più capace)
-MODELLO_ATTORE = os.environ.get("MODELLO_ATTORE", "qwen2.5:7b-instruct-q4_K_M")
-# Modello che aggiorna la memoria in background (più leggero e veloce)
-MODELLO_ARCHIVISTA = os.environ.get("MODELLO_ARCHIVISTA", "qwen2.5:3b-instruct-q4_K_M")
+# Nome del modello da usare. Se lasciato vuoto (come di default) si usa
+# automaticamente il modello caricato in LM Studio, esattamente come faceva
+# LocalStoryEngine. Se carichi due modelli e vuoi ruoli separati, scrivi qui
+# i loro nomi esatti (li vedi nella pagina del server di LM Studio), ad esempio:
+#   set MODELLO_ATTORE=qwen2.5-7b-instruct
+MODELLO_ATTORE = os.environ.get("MODELLO_ATTORE", "")
+# Modello che aggiorna la memoria in background: se vuoto usa lo stesso
+# dell'attore. Con un modello leggero dedicato l'aggiornamento è più rapido.
+MODELLO_ARCHIVISTA = os.environ.get("MODELLO_ARCHIVISTA", "")
 
 TEMPERATURA_ATTORE = float(os.environ.get("TEMPERATURA_ATTORE", "0.8"))
 TEMPERATURA_ARCHIVISTA = float(os.environ.get("TEMPERATURA_ARCHIVISTA", "0.2"))
-NUM_CTX = int(os.environ.get("NUM_CTX", "4096"))
+MAX_TOKENS_ATTORE = int(os.environ.get("MAX_TOKENS_ATTORE", "700"))
+MAX_TOKENS_ARCHIVISTA = int(os.environ.get("MAX_TOKENS_ARCHIVISTA", "500"))
 
 # ---------------------------------------------------------------------------
 # Contesto e memoria

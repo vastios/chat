@@ -14,11 +14,13 @@ import json
 import re
 
 from personaggi import database, memoria, personaggio
-from personaggi.ollama import ErroreOllama, chat
+from personaggi.lmstudio import ErroreLMStudio, chat
 from config import (
     MAX_RICORDI_PER_SCAMBIO,
+    MAX_TOKENS_ARCHIVISTA,
     MODELLO_ARCHIVISTA,
     PROMPT_ARCHIVISTA,
+    TEMPERATURA_ARCHIVISTA,
 )
 
 
@@ -124,7 +126,8 @@ def aggiorna_memoria(id_personaggio, nome_utente=""):
         risposta = chat(
             richiesta,
             modello=MODELLO_ARCHIVISTA,
-            formato="json",
+            temperatura=TEMPERATURA_ARCHIVISTA,
+            max_tokens=MAX_TOKENS_ARCHIVISTA,
         )
         dati = _estrai_json(risposta)
         if dati is None:
@@ -138,5 +141,5 @@ def aggiorna_memoria(id_personaggio, nome_utente=""):
             nota="Aggiornamento archivista",
             n_messaggi=totale_messaggi,
         )
-    except (ErroreOllama, FileNotFoundError, OSError, ValueError):
+    except (ErroreLMStudio, FileNotFoundError, OSError, ValueError):
         return []

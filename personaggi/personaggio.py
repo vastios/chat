@@ -12,7 +12,7 @@ durante la chat vive in memoria.py.
 import json
 import re
 
-from personaggi import ollama
+from personaggi import lmstudio
 from config import MODELLO_ATTORE, PROMPT_CREAZIONE
 
 
@@ -121,7 +121,12 @@ def genera_scheda_con_ia(idea):
 
     ultimo_errore = ""
     for tentativo in range(3):
-        risposta = ollama.chat(richiesta, modello=MODELLO_ATTORE, formato="json")
+        risposta = lmstudio.chat(
+            richiesta,
+            modello=MODELLO_ATTORE,
+            temperatura=0.7,
+            max_tokens=800,
+        )
         dati = estrai_json(risposta)
         if dati is None:
             ultimo_errore = "l'IA non ha restituito un JSON valido"

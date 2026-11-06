@@ -17,31 +17,31 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/4] Creo l'ambiente virtuale...
+echo [1/3] Creo l'ambiente virtuale...
 if not exist venv python -m venv venv
 call venv\Scripts\activate.bat
 
-echo [2/4] Aggiorno pip...
+echo [2/3] Aggiorno pip...
 python -m pip install --upgrade pip --quiet
 
-echo [3/4] Installo Streamlit e requests...
+echo [3/3] Installo Streamlit e requests...
 pip install -r requirements.txt --quiet
 
-echo [4/4] Controllo Ollama...
-where ollama >nul 2>nul
+echo.
+echo Controllo LM Studio (porta 1234)...
+curl -s -m 3 http://localhost:1234/v1/models >nul 2>nul
 if errorlevel 1 (
-    echo [ERRORE] Ollama non trovato.
-    echo Installalo da https://ollama.com e riavvia questo file.
-    pause
-    exit /b 1
+    echo.
+    echo [ATTENZIONE] Il server di LM Studio non risponde: non blocca
+    echo l'installazione, ma serve per far parlare i personaggi.
+    echo.
+    echo   1. Installa LM Studio da https://lmstudio.ai
+    echo   2. Cerca e scarica un modello (consigliato "Qwen2.5 7B Instruct",
+    echo      quantizzazione q4_K_M, circa 4,7 GB)
+    echo   3. Caricalo e premi Start Server nella scheda Developer
+    echo.
 )
 
-echo Scarico il modello attore (una volta sola, circa 4,7 GB)...
-ollama pull qwen2.5:7b-instruct-q4_K_M
-echo Scarico il modello archivista (circa 2,3 GB)...
-ollama pull qwen2.5:3b-instruct-q4_K_M
-
-echo.
 echo ============================================
 echo   Installazione completata!
 echo   Avvia ora "2_avvia.bat"
