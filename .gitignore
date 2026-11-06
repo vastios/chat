@@ -6,5 +6,10 @@ __pycache__/
 *.pyc
 venv/
 
+# Backup e database: niente file di scorta o binari su GitHub
+*backup*
+*.db
+*.db-*
+
 # Streamlit
 .streamlit/secrets.toml
