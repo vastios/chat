@@ -21,5 +21,5 @@ if errorlevel 1 (
 
 call venv\Scripts\activate.bat
 echo Apro Chat Personaggi nel browser (Ctrl+C qui per fermare)...
-streamlit run app.py --server.headless true
+streamlit run app.py
 pause
