@@ -1,26 +1,23 @@
 @echo off
 chcp 65001 >nul
-title Chat Locale AI
+title Chat Personaggi
 cd /d "%~dp0"
 
-rem -- Controlla se Ollama e' attivo; se no lo avvia ridotto a icona
-curl -s -o nul http://localhost:11434 >nul 2>nul
-if errorlevel 1 (
-    echo Avvio di Ollama in background...
-    start "Ollama" /min cmd /c "ollama serve"
-    timeout /t 5 /nobreak >nul
-)
-
 if not exist venv (
-    echo Ambiente non ancora installato: avvia prima "1_installazione.bat"
+    echo [ERRORE] Manca l'ambiente virtuale: lancia prima "1_installazione.bat".
     pause
     exit /b 1
 )
 
+rem Se Ollama non e in esecuzione, lo avvio ridotto a icona
+tasklist /FI "IMAGENAME eq ollama.exe" 2>nul | find /I "ollama.exe" >nul
+if errorlevel 1 (
+    echo Avvio Ollama in background...
+    start "Ollama" /MIN cmd /c "ollama serve"
+    timeout /t 3 /nobreak >nul
+)
+
 call venv\Scripts\activate.bat
-echo.
-echo   Chat Locale AI si apre nel browser:  http://localhost:7860
-echo   Per chiudere tutto: chiudi questa finestra.
-echo.
-python -m backend.app
+echo Apro Chat Personaggi nel browser (Ctrl+C qui per fermare)...
+streamlit run app.py --server.headless true
 pause

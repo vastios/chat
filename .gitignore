@@ -1,9 +1,10 @@
-# Ambiente virtuale e cache Python
-venv/
+# Dati dell'utente: restano sul tuo computer, non finiscono su GitHub
+dati/
+
+# Python
 __pycache__/
 *.pyc
+venv/
 
-# Dati personali generati in uso (la demo resta nel repo)
-dati/storie/*/history/
-dati/storie/*/archivista_log.jsonl
-dati/storie/_eliminata_*/
+# Streamlit
+.streamlit/secrets.toml
