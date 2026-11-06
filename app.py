@@ -14,6 +14,9 @@ in *asterischi*; a destra in alto la 🛠️ Regia, la chat di servizio con la
 macchina (nuovi PNG che entrano in scena, uscite, aggiornamenti della
 memoria da confermare), e in basso i selettori (PNG in scena, luoghi…).
 
+La pagina resta fissa alle dimensioni dello schermo: a muoversi sono solo
+la conversazione e la regia, ognuna dentro il proprio pannello.
+
 La barra laterale tiene le impostazioni generali (tuo nome, memoria
 automatica). Il salvataggio non cambia: tutto resta nei file JSON che
 l'archivista aggiorna dopo ogni scambio.
@@ -158,6 +161,77 @@ CSS_GIOCO = """
   padding:6px 14px; font-size:0.94em;
 }
 .chat-bolle .bolla .az { font-style:italic; opacity:0.65; }
+</style>
+"""
+
+# La pagina occupa esattamente lo schermo: nessuno scroll sull'app,
+# scrollano soltanto i due pannelli di conversazione (chat e regia).
+CSS_PAGINA_FISSA = """
+<style>
+[data-testid="stMain"] {
+  height: 100vh; height: 100dvh;
+  overflow: hidden !important;
+  display: flex !important; flex-direction: column !important;
+}
+[data-testid="stMainBlockContainer"] {
+  flex: 1 1 auto !important; min-height: 0 !important;
+  padding-top: 3.9rem !important; padding-bottom: 0.75rem !important;
+  overflow: hidden !important;
+  display: flex !important; flex-direction: column !important;
+}
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {
+  flex: 1 1 auto !important; min-height: 0 !important;
+}
+[data-testid="stTabs"] {
+  flex: 1 1 auto !important; min-height: 0 !important;
+  display: flex !important; flex-direction: column !important;
+}
+[data-testid="stTabs"] > div {
+  flex: 1 1 auto !important; min-height: 0 !important;
+  display: flex !important; flex-direction: column !important;
+}
+[data-testid="stTabs"] div[role="tablist"] { flex: 0 0 auto !important; }
+/* Solo il pannello del Gioco diventa flessibile: gli altri pannelli
+   restano nascosti come vuole Streamlit (display:none). */
+[data-testid="stTabPanel"]:has(#fine-chat) {
+  flex: 1 1 auto !important; min-height: 0 !important;
+  display: flex !important; flex-direction: column !important;
+}
+[data-testid="stTabPanel"] > [data-testid="stVerticalBlock"]:has(#fine-chat) {
+  flex: 1 1 auto !important; min-height: 0 !important;
+}
+[data-testid="stLayoutWrapper"]:has(#fine-chat),
+[data-testid="stLayoutWrapper"]:has(#fine-regia),
+[data-testid="stHorizontalBlock"]:has(#fine-chat),
+[data-testid="stHorizontalBlock"]:has(#fine-regia) {
+  flex: 1 1 auto !important; min-height: 0 !important;
+}
+[data-testid="stColumn"]:has(#fine-chat),
+[data-testid="stColumn"]:has(#fine-regia) {
+  display: flex !important; flex-direction: column !important;
+  flex: 1 1 auto !important; min-height: 0 !important;
+  height: 100% !important; align-self: stretch !important;
+}
+[data-testid="stColumn"]:has(#fine-chat) > [data-testid="stVerticalBlock"],
+[data-testid="stColumn"]:has(#fine-regia) > [data-testid="stVerticalBlock"] {
+  flex: 1 1 auto !important; min-height: 0 !important;
+}
+[data-testid="stElementContainer"]:has(#fine-chat),
+[data-testid="stElementContainer"]:has(#fine-regia) {
+  display: flex !important; flex-direction: column !important;
+  flex: 1 1 auto !important; min-height: 0 !important;
+}
+/* La regia non si stringe mai sotto una quota usabile: se lo schermo è
+   molto basso, la colonna destra scrolla dentro se stessa. */
+[data-testid="stColumn"] [data-testid="stLayoutWrapper"]:has(#fine-regia) {
+  min-height: 260px !important;
+}
+[data-testid="stVerticalBlock"]:has(#fine-chat),
+[data-testid="stVerticalBlock"]:has(#fine-regia) {
+  height: auto !important; max-height: none !important;
+  flex: 1 1 auto !important; min-height: 0 !important;
+  overflow-y: auto !important;
+}
 </style>
 """
 
@@ -306,7 +380,10 @@ def elabora_regia(pid, testo, scheda, memoria_dati):
     database.aggiungi_messaggio_regia(pid, "utente", testo)
     nomi_png = [p["nome"] for p in database.lista_personaggi()]
     try:
-        messaggio, azione = modulo_regia.interpreta(testo, scheda, memoria_dati, nomi_png)
+        with st.spinner("🎬 La macchina valuta la richiesta…"):
+            messaggio, azione = modulo_regia.interpreta(
+                testo, scheda, memoria_dati, nomi_png
+            )
     except ErroreLMStudio as errore:
         database.aggiungi_messaggio_regia(pid, "macchina", "⚠️ " + str(errore))
         st.rerun()
@@ -575,6 +652,7 @@ def schermata_app():
                     st.rerun()
 
         st.markdown(CSS_GIOCO, unsafe_allow_html=True)
+        st.markdown(CSS_PAGINA_FISSA, unsafe_allow_html=True)
 
         conversazione = database.carica_conversazione(pid)
         messaggi = conversazione.get("messaggi", [])
@@ -604,6 +682,8 @@ def schermata_app():
                     "Comunicazioni di servizio: far arrivare un nuovo PNG, "
                     "un'uscita di scena, aggiornamenti della memoria da confermare…"
                 )
+                if not storico_regia.get("messaggi"):
+                    st.caption("Nessuna comunicazione: scrivi alla macchina qui sotto.")
                 for voce in storico_regia.get("messaggi", []):
                     with st.chat_message(
                         "user" if voce.get("ruolo") == "utente" else "assistant",
@@ -612,7 +692,18 @@ def schermata_app():
                         st.markdown(voce.get("testo", ""))
                 pannello_proposta_memoria(pid)
                 st.markdown('<div id="fine-regia"></div>', unsafe_allow_html=True)
-                richiesta_regia = st.chat_input("Scrivi alla macchina…", key="input_regia")
+            # La casella della regia è un form semplice: funziona in ogni
+            # versione di Streamlit e non fa conflitto con la chat di gioco.
+            with st.form("form_regia", clear_on_submit=True, border=False):
+                richiesta_regia = st.text_input(
+                    "Messaggio per la macchina",
+                    placeholder="Scrivi alla macchina…  (es. fai entrare un barista pettegolo)",
+                    label_visibility="collapsed",
+                    key="input_regia",
+                )
+                invia_regia = st.form_submit_button(
+                    "🎬 Invia alla macchina", use_container_width=True, type="primary"
+                )
 
             # In basso: i selettori.
             with st.container(border=True):
@@ -695,7 +786,7 @@ def schermata_app():
 
             st.rerun()
 
-        if richiesta_regia and richiesta_regia.strip():
+        if invia_regia and richiesta_regia.strip():
             elabora_regia(pid, richiesta_regia.strip(), scheda, memoria_dati)
 
         inietta_autoscroll(6000)

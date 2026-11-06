@@ -75,20 +75,25 @@ streamlit run app.py
    **tutorial** con Sofia, il personaggio d'esempio.
 2. **Crea i tuoi personaggi**: con una descrizione (li compone l'IA) oppure
    campo per campo, includendo il segreto che non riveleranno facilmente.
-3. **Chiacchiera** nella linguetta **💬 Gioco**: lo schermo è diviso in due.
-   A sinistra la chat: le battute parlate diventano **bolle tonde** (azzurre
-   per te, grigie per il personaggio), le azioni scritte in *asterischi*
-   restano in corsivo dentro la bolla, i messaggi di sole azioni diventano
-   **riquadri tratteggiati** al centro. Il personaggio risponde in streaming,
-   coerente con scheda e memoria. Il bottone **⬅️ Menu** ti fa sempre tornare
-   all'elenco.
+3. **Chiacchiera** nella linguetta **💬 Gioco**: la pagina resta **fissa alle
+   dimensioni dello schermo** e si muovono solo le conversazioni. Lo schermo
+   è diviso in due. A sinistra la chat: le battute parlate diventano **bolle
+   tonde** (azzurre per te, grigie per il personaggio), le azioni scritte in
+   *asterischi* restano in corsivo dentro la bolla, i messaggi di sole azioni
+   diventano **riquadri tratteggiati** al centro. Il personaggio risponde in
+   streaming, coerente con scheda e memoria. Il bottone **⬅️ Menu** ti fa
+   sempre tornare all'elenco.
 4. **Comandi di servizio** nella **🛠️ Regia** (in alto a destra): parli con
    la macchina, fuori dal gioco. Puoi far **arrivare un nuovo PNG** in scena
    (lo compone e lo aggiunge ai selettori), segnalare che qualcuno **esce di
    scena**, chiedere aggiornamenti alla memoria — la macchina prepara la
    proposta e la applichi solo dopo **✅ Applica** — e fare domande
-   sull'app. Sotto restano i **selettori**: PNG in scena, luoghi (in
-   arrivo) e nuovo PNG.
+   sull'app. Mentre la macchina ragiona vedrai l'indicatore
+   «🎬 La macchina valuta la richiesta…»; se LM Studio non risponde, l'errore
+   compare nella regia stessa e il gioco continua. Sotto restano i
+   **selettori**: PNG in scena, luoghi (in arrivo) e nuovo PNG. Se lo schermo
+   è molto basso, la colonna di destra scrolla dentro se stessa per tenere
+   la regia sempre utilizzabile.
 5. **Guarda la memoria crescere** nella linguetta **🪪 Personaggio**: umore,
    situazione, fiducia e ricordi si aggiornano dopo ogni scambio. Se un
    aggiornamento non ti piace: *Annulla*. Nella stessa linguetta modifichi
