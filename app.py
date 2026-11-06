@@ -6,8 +6,12 @@ Organizzazione delle schermate:
           d'esempio.
 - NUOVO : creazione di un personaggio, con l'IA o campo per campo.
 - APP   : il roleplay vero e proprio, con tre linguette in alto:
-          💬 Gioco (la chat) · 🪪 Personaggio (scheda e memoria) ·
-          🗺️ Luoghi (predisposta, in arrivo).
+          💬 Gioco · 🪪 Personaggio (scheda e memoria) · 🗺️ Luoghi (in arrivo).
+
+Nella linguetta Gioco lo schermo è diviso in due: a sinistra la chat con
+bolle tonde per i dialoghi e riquadri tratteggiati per le azioni scritte
+in *asterischi*; a destra un pannello diviso a sua volta in due, vuoto in
+alto e con i selettori (PNG in scena, luoghi…) in basso.
 
 La barra laterale tiene le impostazioni generali (tuo nome, memoria
 automatica). Il salvataggio non cambia: tutto resta nei file JSON che
@@ -16,9 +20,12 @@ l'archivista aggiorna dopo ogni scambio.
 Avvio:  streamlit run app.py
 """
 
+import html as modulo_html
+import re
 from datetime import datetime
 
 import streamlit as st
+from streamlit.components.v1 import html as html_js
 
 from config import MODELLO_ARCHIVISTA, MODELLO_ATTORE, BASE_URL
 from personaggi import archivista, database
@@ -30,7 +37,7 @@ from personaggi.lmstudio import ErroreLMStudio, attivo
 st.set_page_config(
     page_title="Chat Personaggi",
     page_icon="💬",
-    layout="centered",
+    layout="wide",
 )
 
 database.inizializza_archivio()
@@ -120,6 +127,125 @@ def crea_personaggio_demo():
     return database.crea_personaggio(
         "Sofia", scheda, origine="demo", saluto=saluto
     )
+
+
+# ---------------------------------------------------------------------------
+# Aspetto della chat: bolle di dialogo e riquadri d'azione
+# ---------------------------------------------------------------------------
+
+CSS_GIOCO = """
+<style>
+.chat-bolle { display:flex; flex-direction:column; gap:10px; padding:6px 2px 12px; }
+.chat-bolle .riga { display:flex; flex-direction:column; max-width:82%; }
+.chat-bolle .riga.destra { align-self:flex-end; align-items:flex-end; }
+.chat-bolle .riga.sinistra { align-self:flex-start; align-items:flex-start; }
+.chat-bolle .riga.centro { align-self:center; align-items:center; max-width:72%; }
+.chat-bolle .autore { font-size:0.72rem; opacity:0.55; margin:0 8px 2px; }
+.chat-bolle .bolla { padding:9px 14px; line-height:1.5; overflow-wrap:break-word; max-width:640px; }
+.chat-bolle .bolla.pg {
+  background:rgba(134,142,150,0.15); border:1px solid rgba(134,142,150,0.35);
+  border-radius:16px 16px 16px 4px;
+}
+.chat-bolle .bolla.ut {
+  background:rgba(88,131,242,0.16); border:1px solid rgba(88,131,242,0.40);
+  border-radius:16px 16px 4px 16px;
+}
+.chat-bolle .bolla.azioni {
+  background:transparent; border:1px dashed rgba(134,142,150,0.55);
+  border-radius:4px; font-style:italic; opacity:0.92; text-align:center;
+  padding:6px 14px; font-size:0.94em;
+}
+.chat-bolle .bolla .az { font-style:italic; opacity:0.65; }
+</style>
+"""
+
+CSS_SCHERMI_STRETTI = (
+    "<style>[data-testid='stMainBlockContainer'],[data-testid='block-container']"
+    "{max-width:860px;margin-left:auto;margin-right:auto;}</style>"
+)
+
+JS_AUTOSCROLL = """
+<script>
+(function() {
+  var doc = window.parent.document;
+  var fine = doc.getElementById('fine-chat');
+  if (!fine) { return; }
+  var box = null;
+  var el = fine.parentElement;
+  while (el) {
+    var stile = window.parent.getComputedStyle(el);
+    if (stile.overflowY === 'auto' || stile.overflowY === 'scroll') { box = el; break; }
+    el = el.parentElement;
+  }
+  if (!box) { return; }
+  box.scrollTop = box.scrollHeight;
+  var avvio = Date.now();
+  var timer = setInterval(function() {
+    if (!doc.getElementById('fine-chat')) { clearInterval(timer); return; }
+    box.scrollTop = box.scrollHeight;
+    if (Date.now() - avvio > DURATA_MS) { clearInterval(timer); }
+  }, 300);
+})();
+</script>
+"""
+
+# Un pezzo d'azione è ciò che sta tra asterischi sulla stessa riga: *sorride*
+_MOTIVO_AZIONE = re.compile(r"(\*[^*\n]+\*)")
+
+
+def parti_parlato_azioni(testo):
+    """Divide il testo in coppie (tipo, pezzo): 'parlato' oppure 'azione' (*…*)."""
+    parti = []
+    for pezzo in _MOTIVO_AZIONE.split(testo or ""):
+        if not pezzo:
+            continue
+        if pezzo.startswith("*") and pezzo.endswith("*") and len(pezzo) > 2:
+            parti.append(("azione", pezzo))
+        else:
+            parti.append(("parlato", pezzo))
+    return parti
+
+
+def bolla_html(ruolo, testo, nome_pg, nome_ut):
+    """Una riga di chat: bolla tonda se c'è del parlato, riquadro se sono solo azioni."""
+    testo = testo or ""
+    parti = parti_parlato_azioni(testo)
+    mio = ruolo == "utente"
+    autore = nome_ut if mio else nome_pg
+    parlato = any(tipo == "parlato" and pezzo.strip() for tipo, pezzo in parti)
+    if parlato:
+        classe = "bolla ut" if mio else "bolla pg"
+        posizione = "destra" if mio else "sinistra"
+        pezzi_corpo = []
+        for tipo, pezzo in parti:
+            if tipo == "azione":
+                pezzi_corpo.append('<span class="az">' + modulo_html.escape(pezzo) + "</span>")
+            else:
+                pezzi_corpo.append(modulo_html.escape(pezzo).replace("\n", "<br>"))
+        corpo = "".join(pezzi_corpo)
+    else:
+        classe = "bolla azioni"
+        posizione = "centro"
+        corpo = modulo_html.escape(testo).replace("\n", "<br>")
+    return (
+        '<div class="riga ' + posizione + '">'
+        '<div class="autore">' + modulo_html.escape(autore) + "</div>"
+        '<div class="' + classe + '">' + corpo + "</div></div>"
+    )
+
+
+def chat_html(messaggi, nome_pg, nome_ut):
+    """Tutta la conversazione in HTML, pronta per st.markdown."""
+    bolle = "".join(
+        bolla_html(voce.get("ruolo", ""), voce.get("testo", ""), nome_pg, nome_ut)
+        for voce in messaggi
+    )
+    return '<div class="chat-bolle">' + bolle + '<div id="fine-chat"></div></div>'
+
+
+def inietta_autoscroll(durata_ms):
+    """Tiene la chat agganciata all'ultimo messaggio per `durata_ms` millisecondi."""
+    html_js(JS_AUTOSCROLL.replace("DURATA_MS", str(int(durata_ms))), height=0)
 
 
 # ---------------------------------------------------------------------------
@@ -344,48 +470,111 @@ def schermata_app():
                     st.session_state.tutorial_attivo = False
                     st.rerun()
 
-        conversazione = database.carica_conversazione(pid)
-        for voce in conversazione.get("messaggi", []):
-            avatar = "user" if voce.get("ruolo") == "utente" else "🪄"
-            with st.chat_message(
-                "user" if voce.get("ruolo") == "utente" else "assistant",
-                avatar=avatar,
-            ):
-                st.markdown(voce.get("testo", ""))
+        st.markdown(CSS_GIOCO, unsafe_allow_html=True)
 
-        prompt = st.chat_input("Scrivi a " + nome_personaggio + "…")
+        conversazione = database.carica_conversazione(pid)
+        messaggi = conversazione.get("messaggi", [])
+        nome_utente_mostrato = st.session_state.nome_utente.strip() or "Tu"
+
+        # Schermo diviso in due: chat a sinistra, pannello a destra.
+        colonna_chat, colonna_pannello = st.columns([8, 2], gap="medium")
+
+        with colonna_chat:
+            with st.container(height=540, border=False):
+                if not messaggi:
+                    st.caption("Nessun messaggio: rompi il ghiaccio con una prima frase.")
+                st.markdown(
+                    chat_html(messaggi, nome_personaggio, nome_utente_mostrato),
+                    unsafe_allow_html=True,
+                )
+                bolla_nuova = st.empty()
+                segnaposto_stream = st.empty()
+            prompt = st.chat_input("Scrivi a " + nome_personaggio + "…")
+
+        with colonna_pannello:
+            # Zona alta del pannello: riservata a sviluppi futuri, per ora vuota.
+            st.container(height=320, border=True)
+            with st.container(border=True):
+                st.markdown("**🎛️ Selettori**")
+                opzioni_png = [
+                    (p["nome"], p["id"]) for p in database.lista_personaggi()
+                ]
+                indice_attuale = 0
+                for numero, (_, id_png) in enumerate(opzioni_png):
+                    if id_png == pid:
+                        indice_attuale = numero
+                        break
+                scelta_png = st.selectbox(
+                    "PNG in scena",
+                    opzioni_png,
+                    index=indice_attuale,
+                    format_func=lambda voce: voce[0],
+                    help="Passa a un altro personaggio: ogni PNG ha il suo roleplay.",
+                    key="selettore_png",
+                )
+                if scelta_png[1] != pid:
+                    apri_roleplay(scelta_png[1])
+                    st.rerun()
+                st.selectbox(
+                    "Luogo attivo",
+                    ["🗺️ In arrivo"],
+                    disabled=True,
+                    help="La gestione dei luoghi arriverà qui.",
+                    key="selettore_luoghi",
+                )
+                if st.button("➕ Nuovo PNG", use_container_width=True,
+                             key="bottone_nuovo_png"):
+                    st.session_state.schermata = "nuovo"
+                    st.rerun()
+                st.caption("Altri selettori in arrivo: oggetti, situazioni…")
 
         if prompt:
             nome_utente = st.session_state.nome_utente.strip()
             database.aggiungi_messaggio(pid, "utente", prompt)
-
-            with st.chat_message("user"):
-                st.markdown(prompt)
+            bolla_nuova.markdown(
+                '<div class="chat-bolle">'
+                + bolla_html("utente", prompt, nome_personaggio, nome_utente_mostrato)
+                + '<div id="fine-chat"></div></div>',
+                unsafe_allow_html=True,
+            )
+            inietta_autoscroll(240000)
 
             scheda_fresca = database.carica_scheda(pid)
             memoria_fresca = modulo_memoria.normalizza_memoria(database.carica_memoria(pid))
             conversazione_fresca = database.carica_conversazione(pid)
 
-            with st.chat_message("assistant", avatar="🪄"):
-                try:
-                    risposta = st.write_stream(
-                        narratore.genera_risposta(
-                            scheda_fresca, memoria_fresca, conversazione_fresca, nome_utente
-                        )
+            accumulo = []
+            try:
+                for pezzo in narratore.genera_risposta(
+                    scheda_fresca, memoria_fresca, conversazione_fresca, nome_utente
+                ):
+                    accumulo.append(pezzo)
+                    segnaposto_stream.markdown(
+                        '<div class="chat-bolle">'
+                        + bolla_html("personaggio", "".join(accumulo),
+                                     nome_personaggio, nome_utente_mostrato)
+                        + '<div id="fine-chat"></div></div>',
+                        unsafe_allow_html=True,
                     )
-                except ErroreLMStudio as errore:
-                    st.error(str(errore))
-                    st.stop()
+            except ErroreLMStudio as errore:
+                st.error(str(errore))
+                st.stop()
 
-            database.aggiungi_messaggio(pid, "personaggio", risposta)
+            risposta = "".join(accumulo).strip()
+            if risposta:
+                database.aggiungi_messaggio(pid, "personaggio", risposta)
 
-            if st.session_state.archivista_attivo:
-                with st.spinner("🧠 " + nome_personaggio + " aggiorna la memoria…"):
-                    cambiamenti = archivista.aggiorna_memoria(pid, nome_utente)
-                if cambiamenti:
-                    st.toast("Memoria aggiornata: " + " · ".join(cambiamenti[:3]), icon="🧠")
+                if st.session_state.archivista_attivo:
+                    with st.spinner("🧠 " + nome_personaggio + " aggiorna la memoria…"):
+                        cambiamenti = archivista.aggiorna_memoria(pid, nome_utente)
+                    if cambiamenti:
+                        st.toast("Memoria aggiornata: " + " · ".join(cambiamenti[:3]), icon="🧠")
+            else:
+                st.warning("Il modello non ha restituito testo: prova a rispedire il messaggio.")
 
             st.rerun()
+
+        inietta_autoscroll(6000)
 
     with tab_personaggio:
         st.markdown("**Scheda di " + nome_personaggio + "** (fonte canonica del personaggio)")
@@ -492,8 +681,10 @@ def schermata_app():
 # ---------------------------------------------------------------------------
 
 if st.session_state.schermata == "nuovo":
+    st.markdown(CSS_SCHERMI_STRETTI, unsafe_allow_html=True)
     schermata_nuovo()
 elif st.session_state.schermata == "app":
     schermata_app()
 else:
+    st.markdown(CSS_SCHERMI_STRETTI, unsafe_allow_html=True)
     schermata_menu()

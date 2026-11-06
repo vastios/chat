@@ -13,7 +13,7 @@ Tutto gira sul tuo computer: **Python + Streamlit + LM Studio**. Nessun dato esc
 
 | Vecchio progetto (RPG) | Nuovo progetto (chat personaggi) |
 |---|---|
-| `app.py` — interfaccia Streamlit | `app.py` — interfaccia Streamlit (menu iniziale + linguette Gioco/Personaggio/Luoghi) |
+| `app.py` — interfaccia Streamlit | `app.py` — interfaccia Streamlit (menu iniziale + linguette Gioco/Personaggio/Luoghi; gioco diviso: chat a bolle a sinistra, selettori a destra) |
 | `config.py` — percorsi e prompt | `config.py` — percorsi, modelli e prompt |
 | `game/database.py` — SQLite | `personaggi/database.py` — **archivio JSON** |
 | `game/character.py` + `npcs.py` — scheda RPG e PNG | `personaggi/personaggio.py` — scheda identità del personaggio |
@@ -74,8 +74,14 @@ streamlit run app.py
    **tutorial** con Sofia, il personaggio d'esempio.
 2. **Crea i tuoi personaggi**: con una descrizione (li compone l'IA) oppure
    campo per campo, includendo il segreto che non riveleranno facilmente.
-3. **Chiacchiera** nella linguetta **💬 Gioco**: il personaggio risponde in
-   streaming, coerente con scheda e memoria. Il bottone **⬅️ Menu** ti fa
+3. **Chiacchiera** nella linguetta **💬 Gioco**: lo schermo è diviso in due.
+   A sinistra la chat: le battute parlate diventano **bolle tonde** (azzurre
+   per te, grigie per il personaggio), le azioni scritte in *asterischi*
+   restano in corsivo dentro la bolla, i messaggi di sole azioni diventano
+   **riquadri tratteggiati** al centro. A destra, sotto la zona vuota
+   riservata alle novità, i **selettori**: cambiare PNG in scena, il futuro
+   selettore dei luoghi e il bottone per un nuovo PNG. Il personaggio risponde
+   in streaming, coerente con scheda e memoria. Il bottone **⬅️ Menu** ti fa
    sempre tornare all'elenco.
 4. **Guarda la memoria crescere** nella linguetta **🪪 Personaggio**: umore,
    situazione, fiducia e ricordi si aggiornano dopo ogni scambio. Se un
