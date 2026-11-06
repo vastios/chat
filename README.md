@@ -13,7 +13,7 @@ Tutto gira sul tuo computer: **Python + Streamlit + LM Studio**. Nessun dato esc
 
 | Vecchio progetto (RPG) | Nuovo progetto (chat personaggi) |
 |---|---|
-| `app.py` — interfaccia Streamlit | `app.py` — interfaccia Streamlit (sidebar + chat) |
+| `app.py` — interfaccia Streamlit | `app.py` — interfaccia Streamlit (menu iniziale + linguette Gioco/Personaggio/Luoghi) |
 | `config.py` — percorsi e prompt | `config.py` — percorsi, modelli e prompt |
 | `game/database.py` — SQLite | `personaggi/database.py` — **archivio JSON** |
 | `game/character.py` + `npcs.py` — scheda RPG e PNG | `personaggi/personaggio.py` — scheda identità del personaggio |
@@ -69,13 +69,20 @@ streamlit run app.py
 
 ## Come si usa
 
-1. **Scegli il personaggio** nella barra laterale (al primo avvio trovi Sofia, di esempio).
+1. **Menu iniziale**: da qui scegli se **continuare un roleplay** iniziato
+   (con la data dell'ultimo scambio), **crearne uno nuovo** o provare il
+   **tutorial** con Sofia, il personaggio d'esempio.
 2. **Crea i tuoi personaggi**: con una descrizione (li compone l'IA) oppure
    campo per campo, includendo il segreto che non riveleranno facilmente.
-3. **Chiacchiera**: il personaggio risponde in streaming, coerente con scheda e memoria.
-4. **Guarda la memoria crescere** nel pannello 🧠: umore, situazione, fiducia e ricordi
-   si aggiornano dopo ogni scambio. Se un aggiornamento non ti piace: *Annulla*.
-5. Il tuo nome lo imposti nella barra laterale: il personaggio ti chiamerà per nome.
+3. **Chiacchiera** nella linguetta **💬 Gioco**: il personaggio risponde in
+   streaming, coerente con scheda e memoria. Il bottone **⬅️ Menu** ti fa
+   sempre tornare all'elenco.
+4. **Guarda la memoria crescere** nella linguetta **🪪 Personaggio**: umore,
+   situazione, fiducia e ricordi si aggiornano dopo ogni scambio. Se un
+   aggiornamento non ti piace: *Annulla*. Nella stessa linguetta modifichi
+   la scheda e gestisci cronologia ed eliminazione.
+5. La linguetta **🗺️ Luoghi** è pronta per le novità che verranno.
+6. Il tuo nome lo imposti nella barra laterale: il personaggio ti chiamerà per nome.
 
 ## La fiducia e il segreto
 
