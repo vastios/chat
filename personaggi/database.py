@@ -14,6 +14,7 @@ Struttura su disco:
           scheda.json                 <- identità canonica (stabile)
           memoria.json                <- umore, situazione, relazione, ricordi
           conversazione.json          <- cronologia dei messaggi
+          regia.json                  <- chat di servizio con la macchina
           log_memoria.jsonl           <- stato precedente a ogni modifica (per l'annulla)
 
 Tutte le scritture sono atomiche: prima si scrive un file temporaneo e poi
@@ -280,6 +281,36 @@ def svuota_conversazione(id_personaggio):
     cartella = cartella_personaggio(id_personaggio)
     _scrivi_json(cartella / "conversazione.json", {"messaggi": []})
     _tocca_indice(id_personaggio)
+
+
+# ---------------------------------------------------------------------------
+# Chat di regia (comunicazioni di servizio con la macchina, fuori dal gioco)
+# ---------------------------------------------------------------------------
+
+MAX_MESSAGGI_REGIA = 60
+
+
+def carica_regia(id_personaggio):
+    """Storico della chat di regia (dati/personaggi/<id>/regia.json)."""
+    return _leggi_json(cartella_personaggio(id_personaggio) / "regia.json", {"messaggi": []})
+
+
+def aggiungi_messaggio_regia(id_personaggio, ruolo, testo):
+    """Aggiunge un messaggio alla chat di regia.
+
+    A differenza della conversazione di gioco NON tocca 'aggiornato_il':
+    le comunicazioni di servizio non cambiano la data dell'ultimo scambio
+    mostrata nel menu.
+    """
+    regia = carica_regia(id_personaggio)
+    regia.setdefault("messaggi", []).append({
+        "ruolo": ruolo,            # 'utente' oppure 'macchina'
+        "testo": str(testo).strip(),
+        "data": _adesso(),
+    })
+    regia["messaggi"] = regia["messaggi"][-MAX_MESSAGGI_REGIA:]
+    _scrivi_json(cartella_personaggio(id_personaggio) / "regia.json", regia)
+    return regia
 
 
 # ---------------------------------------------------------------------------

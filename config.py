@@ -32,11 +32,16 @@ MODELLO_ATTORE = os.environ.get("MODELLO_ATTORE", "")
 # Modello che aggiorna la memoria in background: se vuoto usa lo stesso
 # dell'attore. Con un modello leggero dedicato l'aggiornamento è più rapido.
 MODELLO_ARCHIVISTA = os.environ.get("MODELLO_ARCHIVISTA", "")
+# Modello della chat di regia (comunicazioni di servizio): se vuoto, quello
+# caricato in LM Studio.
+MODELLO_REGIA = os.environ.get("MODELLO_REGIA", "")
 
 TEMPERATURA_ATTORE = float(os.environ.get("TEMPERATURA_ATTORE", "0.8"))
 TEMPERATURA_ARCHIVISTA = float(os.environ.get("TEMPERATURA_ARCHIVISTA", "0.2"))
+TEMPERATURA_REGIA = float(os.environ.get("TEMPERATURA_REGIA", "0.3"))
 MAX_TOKENS_ATTORE = int(os.environ.get("MAX_TOKENS_ATTORE", "700"))
 MAX_TOKENS_ARCHIVISTA = int(os.environ.get("MAX_TOKENS_ARCHIVISTA", "500"))
+MAX_TOKENS_REGIA = int(os.environ.get("MAX_TOKENS_REGIA", "400"))
 
 # ---------------------------------------------------------------------------
 # Contesto e memoria
@@ -117,3 +122,41 @@ REGOLE:
 - "importanza": da 1 (dettaglio minore) a 5 (evento che cambia la relazione).
 - Non inventare nulla: aggiorna soltanto con ciò che è scritto nello scambio.
 - Se non c'è nulla da aggiornare, rispondi con tutti i campi vuoti e la lista vuota."""
+
+# ---------------------------------------------------------------------------
+# Prompt della regia (chat di servizio con la macchina, fuori dal gioco)
+# ---------------------------------------------------------------------------
+
+PROMPT_REGIA = """Sei l'assistente di regia di un'app di roleplay testuale.
+Non sei un personaggio del gioco e non entri nella scena: sei la linea diretta
+tra l'utente-regista e l'applicazione (comunicazioni di servizio).
+
+SITUAZIONE ATTUALE
+- PNG in scena: {nome}
+- Umore del PNG: {umore}
+- Situazione: {situazione}
+- Fiducia verso l'utente: {fiducia}/100
+- PNG disponibili: {elenco_png}
+
+Rispondi SOLO con un oggetto JSON, nessun testo fuori dal JSON, in questo formato:
+{{
+  "messaggio": "frase breve e chiara per l'utente, in italiano",
+  "azione": "crea_png",
+  "descrizione_png": "descrizione completa del nuovo personaggio (solo con crea_png)",
+  "attiva_png": false,
+  "modifiche": {{ "umore": "", "situazione": "", "relazione": {{ "delta_fiducia": 0, "nota": "" }}, "nuovi_ricordi": [ {{ "testo": "", "importanza": 3 }} ] }}
+}}
+
+REGOLE:
+- "crea_png": l'utente vuole far arrivare in scena un nuovo personaggio
+  (es. "fai entrare un barista pettegolo", "arriva la sorella di Marco").
+  In "descrizione_png" scrivi una descrizione ricca: nome, aspetto, carattere,
+  storia, modo di parlare. "attiva_png" è true solo se l'utente vuole che
+  diventi subito il PNG in scena, altrimenti false.
+- "aggiorna_memoria": l'utente chiede di cambiare umore, situazione, fiducia
+  o ricordi (es. "Sofia si offende", "Marco esce di scena"). In "modifiche"
+  metti SOLO i campi da cambiare: l'app mostrerà la proposta e la salverà
+  solo dopo la conferma dell'utente.
+- "nessuna": richieste generiche, chiarimenti, comunicazioni di servizio.
+- Se la richiesta è ambigua, rispondi con "nessuna" e chiedi conferma in "messaggio".
+- Non eseguire mai azioni non richieste: ciò che non è coinvolto non lo toccare."""

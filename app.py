@@ -10,8 +10,9 @@ Organizzazione delle schermate:
 
 Nella linguetta Gioco lo schermo è diviso in due: a sinistra la chat con
 bolle tonde per i dialoghi e riquadri tratteggiati per le azioni scritte
-in *asterischi*; a destra un pannello diviso a sua volta in due, vuoto in
-alto e con i selettori (PNG in scena, luoghi…) in basso.
+in *asterischi*; a destra in alto la 🛠️ Regia, la chat di servizio con la
+macchina (nuovi PNG che entrano in scena, uscite, aggiornamenti della
+memoria da confermare), e in basso i selettori (PNG in scena, luoghi…).
 
 La barra laterale tiene le impostazioni generali (tuo nome, memoria
 automatica). Il salvataggio non cambia: tutto resta nei file JSON che
@@ -27,11 +28,12 @@ from datetime import datetime
 import streamlit as st
 from streamlit.components.v1 import html as html_js
 
-from config import MODELLO_ARCHIVISTA, MODELLO_ATTORE, BASE_URL
+from config import MODELLO_ARCHIVISTA, MODELLO_ATTORE, MODELLO_REGIA, BASE_URL
 from personaggi import archivista, database
 from personaggi import memoria as modulo_memoria
 from personaggi import narratore
 from personaggi import personaggio as modulo_personaggio
+from personaggi import regia as modulo_regia
 from personaggi.lmstudio import ErroreLMStudio, attivo
 
 st.set_page_config(
@@ -168,21 +170,25 @@ JS_AUTOSCROLL = """
 <script>
 (function() {
   var doc = window.parent.document;
-  var fine = doc.getElementById('fine-chat');
-  if (!fine) { return; }
-  var box = null;
-  var el = fine.parentElement;
-  while (el) {
-    var stile = window.parent.getComputedStyle(el);
-    if (stile.overflowY === 'auto' || stile.overflowY === 'scroll') { box = el; break; }
-    el = el.parentElement;
+  var marche = doc.querySelectorAll('[id^="fine-"]');
+  var scatole = [];
+  marche.forEach(function(marca) {
+    var el = marca.parentElement;
+    while (el) {
+      var stile = window.parent.getComputedStyle(el);
+      if (stile.overflowY === 'auto' || stile.overflowY === 'scroll') { scatole.push(el); break; }
+      el = el.parentElement;
+    }
+  });
+  if (!scatole.length) { return; }
+  function a_fondo() {
+    scatole.forEach(function(box) { box.scrollTop = box.scrollHeight; });
   }
-  if (!box) { return; }
-  box.scrollTop = box.scrollHeight;
+  a_fondo();
   var avvio = Date.now();
   var timer = setInterval(function() {
-    if (!doc.getElementById('fine-chat')) { clearInterval(timer); return; }
-    box.scrollTop = box.scrollHeight;
+    if (!doc.querySelector('[id^="fine-"]')) { clearInterval(timer); return; }
+    a_fondo();
     if (Date.now() - avvio > DURATA_MS) { clearInterval(timer); }
   }, 300);
 })();
@@ -244,8 +250,102 @@ def chat_html(messaggi, nome_pg, nome_ut):
 
 
 def inietta_autoscroll(durata_ms):
-    """Tiene la chat agganciata all'ultimo messaggio per `durata_ms` millisecondi."""
+    """Tiene le chat agganciate all'ultimo messaggio per `durata_ms` millisecondi."""
     html_js(JS_AUTOSCROLL.replace("DURATA_MS", str(int(durata_ms))), height=0)
+
+
+def pannello_proposta_memoria(pid):
+    """Carta di conferma per le modifiche alla memoria proposte dalla regia."""
+    proposta = st.session_state.get("proposta_memoria")
+    if not proposta or proposta.get("pid") != pid:
+        return
+    modifiche = proposta.get("modifiche") or {}
+    righe = []
+    if modifiche.get("umore"):
+        righe.append(f"**Umore:** {modifiche['umore']}")
+    if modifiche.get("situazione"):
+        righe.append(f"**Situazione:** {modifiche['situazione']}")
+    relazione = modifiche.get("relazione") or {}
+    try:
+        delta = int(relazione.get("delta_fiducia") or 0)
+    except (TypeError, ValueError):
+        delta = 0
+    if delta:
+        righe.append(f"**Fiducia:** {'+' if delta > 0 else ''}{delta}")
+    if relazione.get("nota"):
+        righe.append(f"**Nota relazione:** {relazione['nota']}")
+    for ricordo in modifiche.get("nuovi_ricordi") or []:
+        if isinstance(ricordo, dict) and str(ricordo.get("testo", "")).strip():
+            righe.append(f"**Ricordo:** {ricordo['testo']}")
+    if not righe:
+        return
+    with st.container(border=True):
+        st.markdown("📝 **Proposta per la memoria** — la applico solo se confermi:")
+        for riga in righe:
+            st.markdown("- " + riga)
+        colonna_si, colonna_no = st.columns(2)
+        with colonna_si:
+            if st.button("✅ Applica", type="primary", use_container_width=True,
+                         key="regia_applica"):
+                cambiamenti = modulo_memoria.applica_aggiornamenti(
+                    pid, modifiche, nota="Aggiornamento dalla regia",
+                    delta_max_fiducia=100,
+                )
+                st.session_state.pop("proposta_memoria", None)
+                if cambiamenti:
+                    st.toast("Memoria aggiornata: " + " · ".join(cambiamenti[:3]), icon="🧠")
+                st.rerun()
+        with colonna_no:
+            if st.button("❌ Scarta", use_container_width=True, key="regia_scarta"):
+                st.session_state.pop("proposta_memoria", None)
+                st.rerun()
+
+
+def elabora_regia(pid, testo, scheda, memoria_dati):
+    """Gestisce una richiesta di servizio: risposta della macchina ed eventuali azioni."""
+    database.aggiungi_messaggio_regia(pid, "utente", testo)
+    nomi_png = [p["nome"] for p in database.lista_personaggi()]
+    try:
+        messaggio, azione = modulo_regia.interpreta(testo, scheda, memoria_dati, nomi_png)
+    except ErroreLMStudio as errore:
+        database.aggiungi_messaggio_regia(pid, "macchina", "⚠️ " + str(errore))
+        st.rerun()
+
+    if azione["azione"] == "crea_png" and azione["descrizione_png"]:
+        try:
+            with st.spinner("🎭 La macchina compone il nuovo PNG…"):
+                nome_nuovo, scheda_nuova, saluto_nuovo = (
+                    modulo_personaggio.genera_scheda_con_ia(azione["descrizione_png"])
+                )
+                id_nuovo = database.crea_personaggio(
+                    nome_nuovo, scheda_nuova, origine="ia", saluto=saluto_nuovo
+                )
+            dove = ("È già il PNG in scena." if azione["attiva_png"]
+                    else "Lo trovi nel selettore «PNG in scena».")
+            database.aggiungi_messaggio_regia(
+                pid, "macchina",
+                messaggio + f"\n\n✅ **{nome_nuovo}** è arrivato. {dove}",
+            )
+            if azione["attiva_png"]:
+                apri_roleplay(id_nuovo)
+            st.rerun()
+        except (ErroreLMStudio, modulo_personaggio.ErroreCreazione) as errore:
+            database.aggiungi_messaggio_regia(
+                pid, "macchina",
+                messaggio + f"\n\n⚠️ Non sono riuscito a creare il PNG: {errore}",
+            )
+            st.rerun()
+
+    if azione["azione"] == "aggiorna_memoria" and azione["modifiche"]:
+        st.session_state["proposta_memoria"] = {"pid": pid, "modifiche": azione["modifiche"]}
+        database.aggiungi_messaggio_regia(
+            pid, "macchina",
+            messaggio + "\n\n📝 Ho pronto la proposta: controllala e confermala qui sotto.",
+        )
+        st.rerun()
+
+    database.aggiungi_messaggio_regia(pid, "macchina", messaggio)
+    st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -299,7 +399,8 @@ with st.sidebar:
     st.caption(
         "Modelli: attore "
         f"`{MODELLO_ATTORE or 'automatico'}` · archivista "
-        f"`{MODELLO_ARCHIVISTA or 'automatico'}` · server LM Studio `{BASE_URL}`"
+        f"`{MODELLO_ARCHIVISTA or 'automatico'}` · regia "
+        f"`{MODELLO_REGIA or 'automatico'}` · server LM Studio `{BASE_URL}`"
     )
 
 
@@ -464,7 +565,10 @@ def schermata_app():
                     "3. Sofia ha un **segreto** in scheda: lo rivelerà solo se la fiducia "
                     "arriva a 70 o più. Gentilezza si paga.\n"
                     "4. Hai sbagliato qualcosa? In 🪪 Personaggio trovi "
-                    "**↩️ Annulla ultima modifica della memoria**."
+                    "**↩️ Annulla ultima modifica della memoria**.\n"
+                    "5. In alto a destra c'è la **🛠️ Regia**: parli con la macchina, "
+                    "fuori dal gioco (far arrivare un nuovo PNG, aggiornamenti della "
+                    "memoria da confermare, comunicazioni di servizio)."
                 )
                 if st.button("Ho capito, iniziamo!", type="primary", key="bottone_fine_tutorial"):
                     st.session_state.tutorial_attivo = False
@@ -476,8 +580,8 @@ def schermata_app():
         messaggi = conversazione.get("messaggi", [])
         nome_utente_mostrato = st.session_state.nome_utente.strip() or "Tu"
 
-        # Schermo diviso in due: chat a sinistra, pannello a destra.
-        colonna_chat, colonna_pannello = st.columns([8, 2], gap="medium")
+        # Schermo diviso in due: chat a sinistra, regia e selettori a destra.
+        colonna_chat, colonna_pannello = st.columns([7, 3], gap="medium")
 
         with colonna_chat:
             with st.container(height=540, border=False):
@@ -492,8 +596,25 @@ def schermata_app():
             prompt = st.chat_input("Scrivi a " + nome_personaggio + "…")
 
         with colonna_pannello:
-            # Zona alta del pannello: riservata a sviluppi futuri, per ora vuota.
-            st.container(height=320, border=True)
+            # In alto: la regia, la linea diretta con la macchina fuori dal gioco.
+            storico_regia = database.carica_regia(pid)
+            with st.container(height=430, border=True):
+                st.markdown("**🛠️ Regia**")
+                st.caption(
+                    "Comunicazioni di servizio: far arrivare un nuovo PNG, "
+                    "un'uscita di scena, aggiornamenti della memoria da confermare…"
+                )
+                for voce in storico_regia.get("messaggi", []):
+                    with st.chat_message(
+                        "user" if voce.get("ruolo") == "utente" else "assistant",
+                        avatar="🎬" if voce.get("ruolo") == "utente" else "🛠️",
+                    ):
+                        st.markdown(voce.get("testo", ""))
+                pannello_proposta_memoria(pid)
+                st.markdown('<div id="fine-regia"></div>', unsafe_allow_html=True)
+                richiesta_regia = st.chat_input("Scrivi alla macchina…", key="input_regia")
+
+            # In basso: i selettori.
             with st.container(border=True):
                 st.markdown("**🎛️ Selettori**")
                 opzioni_png = [
@@ -573,6 +694,9 @@ def schermata_app():
                 st.warning("Il modello non ha restituito testo: prova a rispedire il messaggio.")
 
             st.rerun()
+
+        if richiesta_regia and richiesta_regia.strip():
+            elabora_regia(pid, richiesta_regia.strip(), scheda, memoria_dati)
 
         inietta_autoscroll(6000)
 

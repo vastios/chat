@@ -13,13 +13,14 @@ Tutto gira sul tuo computer: **Python + Streamlit + LM Studio**. Nessun dato esc
 
 | Vecchio progetto (RPG) | Nuovo progetto (chat personaggi) |
 |---|---|
-| `app.py` — interfaccia Streamlit | `app.py` — interfaccia Streamlit (menu iniziale + linguette Gioco/Personaggio/Luoghi; gioco diviso: chat a bolle a sinistra, selettori a destra) |
+| `app.py` — interfaccia Streamlit | `app.py` — interfaccia Streamlit (menu iniziale + linguette Gioco/Personaggio/Luoghi; gioco diviso: chat a bolle a sinistra, regia e selettori a destra) |
 | `config.py` — percorsi e prompt | `config.py` — percorsi, modelli e prompt |
 | `game/database.py` — SQLite | `personaggi/database.py` — **archivio JSON** |
 | `game/character.py` + `npcs.py` — scheda RPG e PNG | `personaggi/personaggio.py` — scheda identità del personaggio |
 | *ricordi e fiducia aggiornati a mano* | `personaggi/memoria.py` — ricordi, fiducia, umore con log e annulla |
 | `game/narrator.py` — LM Studio | `personaggi/lmstudio.py` — **stesso collegamento, identico**; `personaggi/narratore.py` — prompt e streaming |
 | *assente (mai collegato)* | `personaggi/archivista.py` — **aggiorna la memoria da solo** |
+| *assente (mai collegato)* | `personaggi/regia.py` — **chat di servizio con la macchina** (nuovi PNG, proposte di memoria da confermare) |
 | `game/world.py`, `combat.py`, `inventory.py` | *rimossi: niente RPG (per ora)* |
 
 ## I file JSON della memoria
@@ -78,17 +79,22 @@ streamlit run app.py
    A sinistra la chat: le battute parlate diventano **bolle tonde** (azzurre
    per te, grigie per il personaggio), le azioni scritte in *asterischi*
    restano in corsivo dentro la bolla, i messaggi di sole azioni diventano
-   **riquadri tratteggiati** al centro. A destra, sotto la zona vuota
-   riservata alle novità, i **selettori**: cambiare PNG in scena, il futuro
-   selettore dei luoghi e il bottone per un nuovo PNG. Il personaggio risponde
-   in streaming, coerente con scheda e memoria. Il bottone **⬅️ Menu** ti fa
-   sempre tornare all'elenco.
-4. **Guarda la memoria crescere** nella linguetta **🪪 Personaggio**: umore,
+   **riquadri tratteggiati** al centro. Il personaggio risponde in streaming,
+   coerente con scheda e memoria. Il bottone **⬅️ Menu** ti fa sempre tornare
+   all'elenco.
+4. **Comandi di servizio** nella **🛠️ Regia** (in alto a destra): parli con
+   la macchina, fuori dal gioco. Puoi far **arrivare un nuovo PNG** in scena
+   (lo compone e lo aggiunge ai selettori), segnalare che qualcuno **esce di
+   scena**, chiedere aggiornamenti alla memoria — la macchina prepara la
+   proposta e la applichi solo dopo **✅ Applica** — e fare domande
+   sull'app. Sotto restano i **selettori**: PNG in scena, luoghi (in
+   arrivo) e nuovo PNG.
+5. **Guarda la memoria crescere** nella linguetta **🪪 Personaggio**: umore,
    situazione, fiducia e ricordi si aggiornano dopo ogni scambio. Se un
    aggiornamento non ti piace: *Annulla*. Nella stessa linguetta modifichi
    la scheda e gestisci cronologia ed eliminazione.
-5. La linguetta **🗺️ Luoghi** è pronta per le novità che verranno.
-6. Il tuo nome lo imposti nella barra laterale: il personaggio ti chiamerà per nome.
+6. La linguetta **🗺️ Luoghi** è pronta per le novità che verranno.
+7. Il tuo nome lo imposti nella barra laterale: il personaggio ti chiamerà per nome.
 
 ## La fiducia e il segreto
 
@@ -100,9 +106,9 @@ progetto, finalmente collegata al modello.
 ## Personalizzazioni
 
 Tutte in `config.py` (o con variabili d'ambiente): indirizzo del server LM Studio
-(`LMSTUDIO_URL`), modelli per attore e archivista (vuoti = modello caricato, come
-nel vecchio progetto), temperatura, quanti messaggi/ricordi entrano nel contesto,
-lunghezza delle risposte.
+(`LMSTUDIO_URL`), modelli per attore, archivista e regia (vuoti = modello
+caricato, come nel vecchio progetto), temperatura, quanti messaggi/ricordi
+entrano nel contesto, lunghezza delle risposte.
 
 ## Problemi comuni
 
