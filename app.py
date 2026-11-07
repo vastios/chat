@@ -15,9 +15,17 @@ Organizzazione delle schermate:
 Nella linguetta Gioco lo schermo è diviso in due pannelli con cornice
 propria, larghi quanto tutto lo schermo: a sinistra la chat con bolle
 tonde per i dialoghi e riquadri tratteggiati per le azioni scritte in
-*asterischi*; a destra in alto la 🛠️ Regia, la chat di servizio con la
-macchina (nuovi PNG che entrano in scena, uscite, aggiornamenti della
-memoria da confermare), e in basso i selettori (PNG in scena, luoghi…).
+*asterischi* — ogni PNG ha il suo colore, che è anche il colore del suo
+nome nei selettori —; a destra in alto la 🛠️ Regia, la chat di servizio
+con la macchina (nuovi PNG che entrano in scena, uscite, aggiornamenti
+della memoria da confermare), e in basso i selettori: i PNG in scena con
+i nomi colorati, la tendina per far entrare un PNG esistente, il bottone
+➕ Nuovo PNG (entra nella scena attuale, non apre una chat a parte), il
+cambio roleplay e i luoghi.
+
+Il roleplay può avere più PNG in scena: quando ne partecipano più di
+uno, l'attore scrive le battute di tutti (una per riga, col nome davanti)
+e l'app le spezza in bolle colorate per personaggio.
 
 La pagina resta fissa alle dimensioni dello schermo: a muoversi sono solo
 la conversazione e la regia, ognuna dentro il proprio pannello.
@@ -135,6 +143,26 @@ def apri_roleplay(id_personaggio, tutorial=False):
 def vai_al_menu():
     """Torna alla schermata iniziale senza toccare nessun dato."""
     st.session_state.schermata = "menu"
+    # Se la creazione era partita da un roleplay aperto, quel proposito
+    # scade tornando al menu: il prossimo PNG creato apre la sua chat.
+    st.session_state.pop("entrata_in_scena", None)
+
+
+def dopo_creazione(id_nuovo, nome_nuovo=""):
+    """Dopo la creazione di un PNG.
+
+    Se la creazione è partita da un roleplay aperto (bottone ➕ Nuovo PNG
+    nei selettori) il nuovo personaggio entra nella scena attuale — nessuna
+    chat a parte — e si torna al roleplay di provenienza. Se invece nasce
+    dal menu, si apre direttamente il suo roleplay come sempre.
+    """
+    destinazione = st.session_state.pop("entrata_in_scena", None)
+    if destinazione and database.trova_personaggio(destinazione):
+        database.aggiungi_in_scena(destinazione, id_nuovo)
+        apri_roleplay(destinazione)
+        st.toast("🎭 " + (nome_nuovo or "Nuovo PNG") + " è entrato in scena.", icon="🎭")
+    else:
+        apri_roleplay(id_nuovo)
 
 
 def trova_demo():
@@ -172,6 +200,102 @@ def crea_personaggio_demo():
 
 
 # ---------------------------------------------------------------------------
+# Scena: chi è in scena e i colori dei PNG
+# ---------------------------------------------------------------------------
+
+# Palette delle bolle per i PNG: tonalità pastello, testo sempre leggibile.
+# L'azzurro resta all'utente: nella palette non ci sono blu pieni.
+PALETTE_PNG = [
+    {"sfondo": "#fbe3e4", "bordo": "#dca3ab", "tema": "#a34752"},   # rosa cipria
+    {"sfondo": "#e2f0e4", "bordo": "#a3c9ab", "tema": "#3e7a55"},   # verde salvia
+    {"sfondo": "#ece6fa", "bordo": "#b3a6de", "tema": "#67599f"},   # lavanda
+    {"sfondo": "#ffeadb", "bordo": "#e2b28c", "tema": "#b06b3b"},   # pesca
+    {"sfondo": "#fbf3d2", "bordo": "#d8c06a", "tema": "#8a741f"},   # giallo burro
+    {"sfondo": "#dcf1ea", "bordo": "#9ecfc0", "tema": "#2f8471"},   # menta
+    {"sfondo": "#f2e7d9", "bordo": "#c8ab8c", "tema": "#8a6d4b"},   # sabbia
+    {"sfondo": "#eceff4", "bordo": "#b3bfce", "tema": "#5a7089"},   # grigio tenue
+]
+
+
+def carica_scena(pid):
+    """I PNG in scena con nome, colore e ruolo (proprietario o ospite).
+
+    I colori mancanti vengono assegnati con la prima tinta libera della
+    palette e salvati nella conversazione: restano stabili nel tempo.
+    Chi è stato eliminato dall'archivio viene tolto dalla scena.
+    """
+    in_scena, colori = database.carica_scena(pid)
+    validi = [pid] + [
+        voce for voce in in_scena
+        if voce != pid and database.trova_personaggio(voce)
+    ]
+    if validi != in_scena:
+        database.salva_scena(pid, validi)
+        in_scena = validi
+    tinte = {voce["sfondo"] for voce in PALETTE_PNG}
+    usate = {colori.get(voce) for voce in in_scena if colori.get(voce) in tinte}
+    cambiati = False
+    for id_png in in_scena:
+        if colori.get(id_png) not in tinte:
+            libero = next(
+                (voce["sfondo"] for voce in PALETTE_PNG if voce["sfondo"] not in usate),
+                PALETTE_PNG[len(usate) % len(PALETTE_PNG)]["sfondo"],
+            )
+            colori[id_png] = libero
+            usate.add(libero)
+            cambiati = True
+    if cambiati:
+        database.salva_scena(pid, in_scena, colori)
+    nomi = {p["id"]: p.get("nome", "?") for p in database.lista_personaggi()}
+    scena = []
+    for id_png in in_scena:
+        tinta = next(
+            (voce for voce in PALETTE_PNG if voce["sfondo"] == colori[id_png]),
+            PALETTE_PNG[0],
+        )
+        scena.append({
+            "id": id_png,
+            "nome": nomi.get(id_png, id_png),
+            "sfondo": tinta["sfondo"],
+            "bordo": tinta["bordo"],
+            "tema": tinta["tema"],
+            "proprietario": id_png == pid,
+        })
+    return scena
+
+
+def css_scena(scena):
+    """Stile delle bolle per i PNG in scena: ogni personaggio la sua tinta."""
+    blocchi = []
+    for voce in scena:
+        blocchi.append(
+            f".chat-bolle .bolla.pg.p-{voce['id']} {{ "
+            f"background:{voce['sfondo']}; border-color:{voce['bordo']}; }}"
+        )
+        blocchi.append(
+            f".chat-bolle .bolla.azioni.p-{voce['id']} {{ "
+            f"border-color:{voce['bordo']}; background:{voce['sfondo']}59; }}"
+        )
+    return "<style>\n" + "\n".join(blocchi) + "\n</style>"
+
+
+def chip_scena_html(scena):
+    """Chips dei PNG in scena: nome colorato con la tinta delle sue bolle."""
+    pezzi = ['<div class="chips-scena">']
+    for voce in scena:
+        stella = " 🌟" if voce["proprietario"] else ""
+        pezzi.append(
+            f'<span class="chip-png" style="background:{voce["sfondo"]}66;'
+            f'border-color:{voce["bordo"]}">'
+            f'<span class="punto" style="background:{voce["tema"]}"></span>'
+            f'<span style="color:{voce["tema"]};font-weight:700">'
+            + modulo_html.escape(voce["nome"]) + "</span>" + stella + "</span>"
+        )
+    pezzi.append("</div>")
+    return "".join(pezzi)
+
+
+# ---------------------------------------------------------------------------
 # Aspetto della chat: bolle di dialogo e riquadri d'azione
 # ---------------------------------------------------------------------------
 
@@ -198,6 +322,15 @@ CSS_GIOCO = """
   padding:6px 14px; font-size:0.94em;
 }
 .chat-bolle .bolla .az { font-style:italic; opacity:0.65; }
+/* Chips dei PNG in scena (zona selettori). */
+.chips-scena { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px; }
+.chip-png {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:3px 10px; border-radius:999px;
+  border:1.5px solid rgba(134,142,150,0.4); background:rgba(134,142,150,0.08);
+  font-size:0.88rem; line-height:1.4;
+}
+.chip-png .punto { width:9px; height:9px; border-radius:50%; display:inline-block; }
 </style>
 """
 
@@ -430,16 +563,27 @@ def parti_parlato_azioni(testo):
     return parti
 
 
-def bolla_html(ruolo, testo, nome_pg, nome_ut):
-    """Una riga di chat: bolla tonda se c'è del parlato, riquadro se sono solo azioni."""
-    testo = testo or ""
+def bolla_html(voce, mappa_scena, nome_ut):
+    """Una riga di chat: bolla tonda se c'è del parlato, riquadro se sono
+    solo azioni. `voce` è un messaggio (ruolo, testo, chi): il colore della
+    bolla e del nome dell'autore è quello del PNG in scena che ha parlato."""
+    testo = voce.get("testo") or ""
     parti = parti_parlato_azioni(testo)
-    mio = ruolo == "utente"
-    autore = nome_ut if mio else nome_pg
+    utente = voce.get("ruolo") == "utente"
+    chi = "" if utente else str(voce.get("chi") or "")
+    voce_scena = mappa_scena.get(chi) if chi else None
+    autore = nome_ut if utente else (
+        voce.get("nome_png") or (voce_scena or {}).get("nome") or "Personaggio"
+    )
+    tema = (voce_scena or {}).get("tema")
+    classe_colore = f" p-{chi}" if chi else ""
+    stile_autore = (
+        f' style="color:{tema};font-weight:600"' if (not utente and tema) else ""
+    )
     parlato = any(tipo == "parlato" and pezzo.strip() for tipo, pezzo in parti)
     if parlato:
-        classe = "bolla ut" if mio else "bolla pg"
-        posizione = "destra" if mio else "sinistra"
+        classe = "bolla ut" if utente else "bolla pg" + classe_colore
+        posizione = "destra" if utente else "sinistra"
         pezzi_corpo = []
         for tipo, pezzo in parti:
             if tipo == "azione":
@@ -448,23 +592,29 @@ def bolla_html(ruolo, testo, nome_pg, nome_ut):
                 pezzi_corpo.append(modulo_html.escape(pezzo).replace("\n", "<br>"))
         corpo = "".join(pezzi_corpo)
     else:
-        classe = "bolla azioni"
+        classe = "bolla azioni" + classe_colore
         posizione = "centro"
         corpo = modulo_html.escape(testo).replace("\n", "<br>")
     return (
         '<div class="riga ' + posizione + '">'
-        '<div class="autore">' + modulo_html.escape(autore) + "</div>"
+        '<div class="autore"' + stile_autore + ">" + modulo_html.escape(autore) + "</div>"
         '<div class="' + classe + '">' + corpo + "</div></div>"
     )
 
 
-def chat_html(messaggi, nome_pg, nome_ut):
-    """Tutta la conversazione in HTML, pronta per st.markdown."""
-    bolle = "".join(
-        bolla_html(voce.get("ruolo", ""), voce.get("testo", ""), nome_pg, nome_ut)
-        for voce in messaggi
-    )
-    return '<div class="chat-bolle">' + bolle + '<div id="fine-chat"></div></div>'
+def chat_html(messaggi, mappa_scena, nome_ut, chi_default=""):
+    """Tutta la conversazione in HTML, pronta per st.markdown.
+
+    I messaggi dei personaggi senza `chi` (i vecchi, salvati prima della
+    scena multi-PNG) vengono attribuiti al personaggio predefinito.
+    """
+    bolle = []
+    for voce in messaggi:
+        voce_completa = dict(voce)
+        if voce_completa.get("ruolo") != "utente" and not voce_completa.get("chi"):
+            voce_completa["chi"] = chi_default
+        bolle.append(bolla_html(voce_completa, mappa_scena, nome_ut))
+    return '<div class="chat-bolle">' + "".join(bolle) + '<div id="fine-chat"></div></div>'
 
 
 def inietta_autoscroll(durata_ms):
@@ -551,14 +701,14 @@ def elabora_regia(pid, testo, scheda, memoria_dati):
                 id_nuovo = database.crea_personaggio(
                     nome_nuovo, scheda_nuova, origine="ia", saluto=saluto_nuovo
                 )
-            dove = ("È già il PNG in scena." if azione["attiva_png"]
-                    else "Lo trovi nel selettore «PNG in scena».")
+            # Il nuovo PNG entra nella scena attuale: mai una chat a parte.
+            database.aggiungi_in_scena(pid, id_nuovo)
             database.aggiungi_messaggio_regia(
                 pid, "macchina",
-                messaggio + f"\n\n✅ **{nome_nuovo}** è arrivato. {dove}",
+                messaggio
+                + "\n\n✅ **" + nome_nuovo + "** è arrivato ed è subito in scena: "
+                "la prossima risposta può dargli la parola.",
             )
-            if azione["attiva_png"]:
-                apri_roleplay(id_nuovo)
             st.rerun()
         except (ErroreLMStudio, modulo_personaggio.ErroreCreazione) as errore:
             database.aggiungi_messaggio_regia(
@@ -707,6 +857,14 @@ def schermata_nuovo():
             vai_al_menu()
             st.rerun()
 
+    destinazione_scena = st.session_state.get("entrata_in_scena")
+    if destinazione_scena and database.trova_personaggio(destinazione_scena):
+        nome_dest = (database.trova_personaggio(destinazione_scena) or {}).get("nome", "?")
+        st.info(
+            "🎭 Il nuovo PNG entrerà nella scena del roleplay di **" + nome_dest
+            + "**: al termine non si apre una chat a parte, si unisce alla conversazione in corso.",
+        )
+
     st.caption("Il personaggio nasce con la sua scheda, la sua memoria e un saluto d'apertura.")
 
     tipo = st.radio(
@@ -729,9 +887,10 @@ def schermata_nuovo():
                 with st.spinner("Creo il personaggio…"):
                     try:
                         nome, scheda, saluto = modulo_personaggio.genera_scheda_con_ia(idea)
-                        apri_roleplay(database.crea_personaggio(
+                        id_nuovo = database.crea_personaggio(
                             nome, scheda, origine="ia", saluto=saluto
-                        ))
+                        )
+                        dopo_creazione(id_nuovo, nome)
                         st.rerun()
                     except (ErroreLMStudio, modulo_personaggio.ErroreCreazione) as errore:
                         st.error(str(errore))
@@ -749,9 +908,10 @@ def schermata_nuovo():
                 elif errori:
                     st.warning(" ".join(errori))
                 else:
-                    apri_roleplay(database.crea_personaggio(
+                    id_nuovo = database.crea_personaggio(
                         nome_manuale.strip(), scheda, origine="giocatore"
-                    ))
+                    )
+                    dopo_creazione(id_nuovo, nome_manuale.strip())
                     st.rerun()
 
 
@@ -775,6 +935,20 @@ def schermata_app():
     dati_indice = database.trova_personaggio(pid) or {}
     nome_utente_mostrato = st.session_state.nome_utente.strip() or "Tu"
 
+    # Chi è in scena e con quale colore (i colori mancanti vengono assegnati
+    # e salvati qui: restano stabili). Le schede servono al prompt di scena.
+    scena = carica_scena(pid)
+    ids_scena = [voce["id"] for voce in scena]
+    mappa_scena = {voce["id"]: voce for voce in scena}
+    schede_scena = []
+    for id_png in ids_scena:
+        try:
+            scheda_scena = dict(database.carica_scheda(id_png))
+            scheda_scena["id"] = id_png
+            schede_scena.append(scheda_scena)
+        except FileNotFoundError:
+            continue
+
     # --- intestazione: titolo al centro, riga d'informazioni, linguette ---
     st.markdown(
         '<h1 class="titolo-chat">💬 '
@@ -788,6 +962,8 @@ def schermata_app():
     origine = dati_indice.get("origine", "")
     if etichetta_origine(origine):
         pezzi_info.append(emoji_origine(origine) + " " + etichetta_origine(origine))
+    if len(scena) > 1:
+        pezzi_info.append("👥 " + ", ".join(voce["nome"] for voce in scena))
     if memoria_dati.get("umore"):
         pezzi_info.append("🧠 umore: " + memoria_dati["umore"])
     pezzi_info.append(f"🤝 fiducia {fiducia}/100")
@@ -824,6 +1000,7 @@ def schermata_app():
                 st.rerun()
 
     st.markdown(CSS_GIOCO, unsafe_allow_html=True)
+    st.markdown(css_scena(scena), unsafe_allow_html=True)
     st.markdown(CSS_PAGINA_FISSA, unsafe_allow_html=True)
 
     if st.session_state.linguetta == "gioco":
@@ -857,7 +1034,7 @@ def schermata_app():
                 if not messaggi:
                     st.caption("Nessun messaggio: rompi il ghiaccio con una prima frase.")
                 st.markdown(
-                    chat_html(messaggi, nome_personaggio, nome_utente_mostrato),
+                    chat_html(messaggi, mappa_scena, nome_utente_mostrato, chi_default=pid),
                     unsafe_allow_html=True,
                 )
                 bolla_nuova = st.empty()
@@ -897,28 +1074,65 @@ def schermata_app():
                     "🎬 Invia alla macchina", use_container_width=True, type="primary"
                 )
 
-            # In basso: i selettori.
+            # In basso: i selettori — la scena e chi la abita.
             st.markdown('<div class="titolo-pannello">🎛️ Selettori</div>',
                         unsafe_allow_html=True)
             with st.container(border=True):
-                opzioni_png = [
+                st.caption("🎭 PNG in scena — il colore di ogni nome è quello delle sue bolle.")
+                st.markdown(chip_scena_html(scena), unsafe_allow_html=True)
+
+                # Far entrare nella scena un PNG già esistente.
+                candidati = [
+                    (p["nome"], p["id"]) for p in database.lista_personaggi()
+                    if p["id"] not in ids_scena
+                ]
+                if candidati:
+                    scelta_entrata = st.selectbox(
+                        "Fai entrare in scena",
+                        [("+ — scegli un PNG —", "")] + candidati,
+                        index=0,
+                        format_func=lambda voce: voce[0],
+                        help="Il PNG entra nel roleplay attuale: nessuna chat a parte.",
+                        key="selettore_entrata",
+                    )
+                    if scelta_entrata[1]:
+                        database.aggiungi_in_scena(pid, scelta_entrata[1])
+                        st.toast("🎭 " + scelta_entrata[0] + " è entrato in scena.", icon="🎭")
+                        st.rerun()
+                else:
+                    st.selectbox(
+                        "Fai entrare in scena",
+                        ["Tutti i PNG sono già in scena"],
+                        disabled=True,
+                        key="selettore_entrata_piena",
+                    )
+
+                # Creare un PNG nuovo: entra in questa scena, non apre una chat.
+                if st.button("➕ Nuovo PNG", use_container_width=True,
+                             key="bottone_nuovo_png"):
+                    st.session_state["entrata_in_scena"] = pid
+                    st.session_state.schermata = "nuovo"
+                    st.rerun()
+
+                # Tornare al roleplay di un altro personaggio.
+                opzioni_roleplay = [
                     (p["nome"], p["id"]) for p in database.lista_personaggi()
                 ]
-                indice_attuale = 0
-                for numero, (_, id_png) in enumerate(opzioni_png):
+                indice_roleplay = 0
+                for numero, (_, id_png) in enumerate(opzioni_roleplay):
                     if id_png == pid:
-                        indice_attuale = numero
+                        indice_roleplay = numero
                         break
-                scelta_png = st.selectbox(
-                    "PNG in scena",
-                    opzioni_png,
-                    index=indice_attuale,
+                scelta_roleplay = st.selectbox(
+                    "🗂️ Cambia roleplay",
+                    opzioni_roleplay,
+                    index=indice_roleplay,
                     format_func=lambda voce: voce[0],
-                    help="Passa a un altro personaggio: ogni PNG ha il suo roleplay.",
-                    key="selettore_png",
+                    help="Apri il roleplay di un altro personaggio.",
+                    key="selettore_roleplay",
                 )
-                if scelta_png[1] != pid:
-                    apri_roleplay(scelta_png[1])
+                if scelta_roleplay[1] != pid:
+                    apri_roleplay(scelta_roleplay[1])
                     st.rerun()
                 st.selectbox(
                     "Luogo attivo",
@@ -927,19 +1141,16 @@ def schermata_app():
                     help="La gestione dei luoghi arriverà qui.",
                     key="selettore_luoghi",
                 )
-                if st.button("➕ Nuovo PNG", use_container_width=True,
-                             key="bottone_nuovo_png"):
-                    st.session_state.schermata = "nuovo"
-                    st.rerun()
                 st.caption("Altri selettori in arrivo: oggetti, situazioni…")
 
         if prompt:
             nome_utente = st.session_state.nome_utente.strip()
             database.aggiungi_messaggio(pid, "utente", prompt)
             bolla_nuova.markdown(
-                '<div class="chat-bolle">'
-                + bolla_html("utente", prompt, nome_personaggio, nome_utente_mostrato)
-                + '<div id="fine-chat"></div></div>',
+                chat_html(
+                    [{"ruolo": "utente", "testo": prompt}],
+                    mappa_scena, nome_utente_mostrato, chi_default=pid,
+                ),
                 unsafe_allow_html=True,
             )
             inietta_autoscroll(240000)
@@ -951,14 +1162,17 @@ def schermata_app():
             accumulo = []
             try:
                 for pezzo in narratore.genera_risposta(
-                    scheda_fresca, memoria_fresca, conversazione_fresca, nome_utente
+                    scheda_fresca, memoria_fresca, conversazione_fresca, nome_utente,
+                    scena=scena, schede_scena=schede_scena,
                 ):
                     accumulo.append(pezzo)
+                    battute_live = narratore.spezza_risposta("".join(accumulo), scena, pid)
+                    voci_live = [
+                        {"ruolo": "personaggio", "testo": pezzo_battuta, "chi": chi_battuta}
+                        for chi_battuta, pezzo_battuta in battute_live
+                    ]
                     segnaposto_stream.markdown(
-                        '<div class="chat-bolle">'
-                        + bolla_html("personaggio", "".join(accumulo),
-                                     nome_personaggio, nome_utente_mostrato)
-                        + '<div id="fine-chat"></div></div>',
+                        chat_html(voci_live, mappa_scena, nome_utente_mostrato, chi_default=pid),
                         unsafe_allow_html=True,
                     )
             except ErroreLMStudio as errore:
@@ -967,7 +1181,14 @@ def schermata_app():
 
             risposta = "".join(accumulo).strip()
             if risposta:
-                database.aggiungi_messaggio(pid, "personaggio", risposta)
+                battute = narratore.spezza_risposta(risposta, scena, pid)
+                if battute:
+                    for chi_battuta, testo_battuta in battute:
+                        database.aggiungi_messaggio(
+                            pid, "personaggio", testo_battuta, chi=chi_battuta
+                        )
+                else:
+                    database.aggiungi_messaggio(pid, "personaggio", risposta, chi=pid)
 
                 if st.session_state.archivista_attivo:
                     with st.spinner("🧠 " + nome_personaggio + " aggiorna la memoria…"):

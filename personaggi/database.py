@@ -13,7 +13,9 @@ Struttura su disco:
         <id>/
           scheda.json                 <- identità canonica (stabile)
           memoria.json                <- umore, situazione, relazione, ricordi
-          conversazione.json          <- cronologia dei messaggi
+          conversazione.json          <- cronologia dei messaggi; qui vivono anche
+                                         "in_scena" (chi partecipa al roleplay)
+                                         e "colori" (colore bolle di ogni PNG)
           regia.json                  <- chat di servizio con la macchina
           log_memoria.jsonl           <- stato precedente a ogni modifica (per l'annulla)
 
@@ -264,16 +266,71 @@ def salva_conversazione(id_personaggio, conversazione):
     _tocca_indice(id_personaggio)
 
 
-def aggiungi_messaggio(id_personaggio, ruolo, testo):
-    """Aggiunge un messaggio in coda e restituisce la conversazione aggiornata."""
+def aggiungi_messaggio(id_personaggio, ruolo, testo, chi=None):
+    """Aggiunge un messaggio in coda e restituisce la conversazione aggiornata.
+
+    Nei messaggi del personaggio, `chi` è l'id del PNG che ha parlato:
+    serve a colorare le bolle e a ricostruire le battute quando in scena
+    ci sono più personaggi. I messaggi vecchi restano com'erano.
+    """
     conversazione = carica_conversazione(id_personaggio)
-    conversazione["messaggi"].append({
+    voce = {
         "ruolo": ruolo,            # 'utente' oppure 'personaggio'
         "testo": str(testo).strip(),
         "data": _adesso(),
-    })
+    }
+    if ruolo == "personaggio":
+        voce["chi"] = str(chi or "")
+    conversazione["messaggi"].append(voce)
     salva_conversazione(id_personaggio, conversazione)
     return conversazione
+
+
+# ---------------------------------------------------------------------------
+# Scena: chi partecipa al roleplay e con quale colore
+# ---------------------------------------------------------------------------
+
+def carica_scena(id_personaggio):
+    """Restituisce (in_scena, colori) del roleplay, con valori di ripiego.
+
+    in_scena: lista di id di personaggi presenti nella scena (il proprietario
+    del roleplay in prima posizione). colori: mappa id -> colore di sfondo
+    delle bolle, stabile nel tempo.
+    """
+    conversazione = carica_conversazione(id_personaggio)
+    in_scena = list(conversazione.get("in_scena") or [])
+    if id_personaggio not in in_scena:
+        in_scena.insert(0, id_personaggio)
+    colori = dict(conversazione.get("colori") or {})
+    return in_scena, colori
+
+
+def salva_scena(id_personaggio, in_scena, colori=None):
+    """Salva chi è in scena e i colori assegnati."""
+    conversazione = carica_conversazione(id_personaggio)
+    conversazione["in_scena"] = [str(voce) for voce in in_scena]
+    if colori is not None:
+        conversazione["colori"] = {str(k): v for k, v in colori.items()}
+    salva_conversazione(id_personaggio, conversazione)
+
+
+def aggiungi_in_scena(id_personaggio, id_png):
+    """Fa entrare un PNG nella scena del roleplay (idempotente)."""
+    in_scena, _ = carica_scena(id_personaggio)
+    if id_png not in in_scena:
+        in_scena.append(id_png)
+        salva_scena(id_personaggio, in_scena)
+    return in_scena
+
+
+def rimuovi_dalla_scena(id_personaggio, id_png):
+    """Toglie un PNG dalla scena; il proprietario del roleplay resta sempre."""
+    if id_png == id_personaggio:
+        return carica_scena(id_personaggio)[0]
+    in_scena, _ = carica_scena(id_personaggio)
+    in_scena = [voce for voce in in_scena if voce != id_png]
+    salva_scena(id_personaggio, in_scena)
+    return in_scena
 
 
 def svuota_conversazione(id_personaggio):

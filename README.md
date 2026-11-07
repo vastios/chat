@@ -13,7 +13,7 @@ Tutto gira sul tuo computer: **Python + Streamlit + LM Studio**. Nessun dato esc
 
 | Vecchio progetto (RPG) | Nuovo progetto (chat personaggi) |
 |---|---|
-| `app.py` — interfaccia Streamlit | `app.py` — interfaccia Streamlit (menu iniziale + linguette Gioco/Personaggio/Luoghi; gioco a larghezza piena: pannello dialogo a sinistra, pannello regia e selettori a destra) |
+| `app.py` — interfaccia Streamlit | `app.py` — interfaccia Streamlit (menu iniziale + linguette Gioco/Personaggio/Luoghi; gioco a larghezza piena: pannello dialogo a sinistra, pannello regia e selettori a destra; bolle colorate per PNG in scena) |
 | `config.py` — percorsi e prompt | `config.py` — percorsi, modelli e prompt |
 | `game/database.py` — SQLite | `personaggi/database.py` — **archivio JSON** |
 | `game/character.py` + `npcs.py` — scheda RPG e PNG | `personaggi/personaggio.py` — scheda identità del personaggio |
@@ -94,21 +94,34 @@ streamlit run app.py
 5. **Comandi di servizio** nella **🛠️ Regia** (pannello di destra, il titolo
    resta fisso in cima anche mentre i messaggi scorrono): parli con
    la macchina, fuori dal gioco. Puoi far **arrivare un nuovo PNG** in scena
-   (lo compone e lo aggiunge ai selettori), segnalare che qualcuno **esce di
-   scena**, chiedere aggiornamenti alla memoria — la macchina prepara la
-   proposta e la applichi solo dopo **✅ Applica** — e fare domande
-   sull'app. Mentre la macchina ragiona vedrai l'indicatore
+   (lo compone e lo aggiunge **subito alla scena attuale**), segnalare che
+   qualcuno **esce di scena**, chiedere aggiornamenti alla memoria — la
+   macchina prepara la proposta e la applichi solo dopo **✅ Applica** — e
+   fare domande sull'app. Mentre la macchina ragiona vedrai l'indicatore
    «🎬 La macchina valuta la richiesta…»; se LM Studio non risponde, l'errore
    compare nella regia stessa e il gioco continua. Sotto restano i
-   **selettori**: PNG in scena, luoghi (in arrivo) e nuovo PNG. Se lo schermo
-   è molto basso, la colonna di destra scrolla dentro se stessa per tenere
-   la regia sempre utilizzabile.
-6. **Guarda la memoria crescere** nella linguetta **🪪 Personaggio**: umore,
+   **selettori** (v. sotto). Se lo schermo è molto basso, la colonna di
+   destra scrolla dentro se stessa per tenere la regia sempre utilizzabile.
+6. **🎛️ Selettori — la scena e chi la abita.** Ogni PNG **in scena** appare
+   come una **chip col nome colorato**: quel colore è **lo stesso delle sue
+   bolle** nella chat (dialogo e azioni), così chi parla si vede a colpo
+   d'occhio. Da qui puoi **far entrare in scena un PNG già esistente**
+   (tendina «Fai entrare in scena»), **crearne uno nuovo** col bottone
+   **➕ Nuovo PNG** — il nuovo personaggio **entra nella conversazione
+   attuale**, non si apre mai una chat a parte — o **cambiare roleplay**
+   (🗂️). Il proprietario del roleplay porta la stella 🌟. I colori restano
+   salvati nei dati (chiave `colori` della conversazione) e non cambiano.
+7. **Più PNG in scena insieme.** Quando la scena ospita più personaggi,
+   la risposta dell'attore può dare la parola a tutti: ogni battuta
+   ("Marco: …") diventa una **bolla del colore di quel PNG**, col suo nome
+   colorato sopra. La riga d'informazioni in alto mostra «👥 …» con la
+   compagnia attuale.
+8. **Guarda la memoria crescere** nella linguetta **🪪 Personaggio**: umore,
    situazione, fiducia e ricordi si aggiornano dopo ogni scambio. Se un
    aggiornamento non ti piace: *Annulla*. Nella stessa linguetta modifichi
    la scheda e gestisci cronologia ed eliminazione.
-7. La linguetta **🗺️ Luoghi** è pronta per le novità che verranno.
-8. Il tuo nome lo imposti nella barra laterale: il personaggio ti chiamerà per nome.
+9. La linguetta **🗺️ Luoghi** è pronta per le novità che verranno.
+10. Il tuo nome lo imposti nella barra laterale: il personaggio ti chiamerà per nome.
 
 ## La fiducia e il segreto
 
