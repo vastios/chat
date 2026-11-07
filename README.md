@@ -81,9 +81,14 @@ streamlit run app.py
    tonde** (azzurre per te, grigie per il personaggio), le azioni scritte in
    *asterischi* restano in corsivo dentro la bolla, i messaggi di sole azioni
    diventano **riquadri tratteggiati** al centro. Il personaggio risponde in
-   streaming, coerente con scheda e memoria. Il bottone **⬅️ Menu** ti fa
-   sempre tornare all'elenco.
-4. **Comandi di servizio** nella **🛠️ Regia** (in alto a destra): parli con
+   streaming, coerente con scheda e memoria.
+4. **In alto, l'intestazione della chat**: il **titolo al centro** (nome del
+   personaggio), subito sotto una **riga d'informazioni sempre aggiornata** —
+   origine, umore, fiducia, numero di messaggi, ultimo scambio — e ancora
+   sotto la **barra delle linguette a bottone**: **⬅️ Menu**, **💬 Gioco**,
+   **🪪 Personaggio**, **🗺️ Luoghi**, tutte con la stessa estetica e quella
+   attiva evidenziata. Aggiungerne una nuova è una riga in `LINGUETTE_APP`.
+5. **Comandi di servizio** nella **🛠️ Regia** (in alto a destra): parli con
    la macchina, fuori dal gioco. Puoi far **arrivare un nuovo PNG** in scena
    (lo compone e lo aggiunge ai selettori), segnalare che qualcuno **esce di
    scena**, chiedere aggiornamenti alla memoria — la macchina prepara la
@@ -94,12 +99,12 @@ streamlit run app.py
    **selettori**: PNG in scena, luoghi (in arrivo) e nuovo PNG. Se lo schermo
    è molto basso, la colonna di destra scrolla dentro se stessa per tenere
    la regia sempre utilizzabile.
-5. **Guarda la memoria crescere** nella linguetta **🪪 Personaggio**: umore,
+6. **Guarda la memoria crescere** nella linguetta **🪪 Personaggio**: umore,
    situazione, fiducia e ricordi si aggiornano dopo ogni scambio. Se un
    aggiornamento non ti piace: *Annulla*. Nella stessa linguetta modifichi
    la scheda e gestisci cronologia ed eliminazione.
-6. La linguetta **🗺️ Luoghi** è pronta per le novità che verranno.
-7. Il tuo nome lo imposti nella barra laterale: il personaggio ti chiamerà per nome.
+7. La linguetta **🗺️ Luoghi** è pronta per le novità che verranno.
+8. Il tuo nome lo imposti nella barra laterale: il personaggio ti chiamerà per nome.
 
 ## La fiducia e il segreto
 

@@ -5,8 +5,12 @@ Organizzazione delle schermate:
           crearne uno nuovo o provare il tutorial con Sofia, il personaggio
           d'esempio.
 - NUOVO : creazione di un personaggio, con l'IA o campo per campo.
-- APP   : il roleplay vero e proprio, con tre linguette in alto:
-          💬 Gioco · 🪪 Personaggio (scheda e memoria) · 🗺️ Luoghi (in arrivo).
+- APP   : il roleplay vero e proprio. In alto, al centro, il titolo della
+          chat; subito sotto una riga d'informazioni sul personaggio
+          (origine, umore, fiducia, messaggi, ultimo scambio); ancora
+          sotto la barra delle linguette a bottone — ⬅️ Menu, 💬 Gioco,
+          🪪 Personaggio, 🗺️ Luoghi — pronta ad accoglierne di nuove
+          (basta aggiungerle a LINGUETTE_APP).
 
 Nella linguetta Gioco lo schermo è diviso in due: a sinistra la chat con
 bolle tonde per i dialoghi e riquadri tratteggiati per le azioni scritte
@@ -26,6 +30,7 @@ Avvio:  streamlit run app.py
 
 import html as modulo_html
 import re
+from contextlib import contextmanager
 from datetime import datetime
 
 import streamlit as st
@@ -47,6 +52,27 @@ st.set_page_config(
 
 database.inizializza_archivio()
 
+# Chrome di Streamlit ridotto all'osso su tutte le schermate: la barra in
+# alto diventa una striscia trasparente e bassa, senza menù né indicatori
+# (il bottone per riaprire la barra laterale resta usabile, sta nel
+# toolbar che appare solo quando serve) e il contenuto parte subito sotto.
+CSS_BASE = """
+<style>
+[data-testid="stHeader"] {
+  background: transparent !important;
+  height: 1.6rem !important; min-height: 0 !important;
+  border: none !important; box-shadow: none !important;
+  overflow: visible !important;
+}
+[data-testid="stMainMenu"], [data-testid="stStatusWidget"],
+[data-testid="stAppDeployButton"] {
+  display: none !important;
+}
+[data-testid="stMainBlockContainer"] { padding-top: 0.9rem !important; }
+</style>
+"""
+st.markdown(CSS_BASE, unsafe_allow_html=True)
+
 
 # ---------------------------------------------------------------------------
 # Funzioni di supporto
@@ -57,6 +83,15 @@ ORIGINI = {
     "ia": ("creato con l'IA", "✨"),
     "giocatore": ("creato da te", "🙋"),
 }
+
+# Linguette della schermata di gioco: per aggiungerne una in futuro basta
+# una nuova voce qui e un ramo `elif` più sotto: la barra a bottone si
+# adatta da sola.
+LINGUETTE_APP = [
+    ("gioco", "💬 Gioco"),
+    ("personaggio", "🪪 Personaggio"),
+    ("luoghi", "🗺️ Luoghi"),
+]
 
 
 def etichetta_origine(origine):
@@ -93,6 +128,7 @@ def apri_roleplay(id_personaggio, tutorial=False):
     st.session_state.personaggio_id = id_personaggio
     st.session_state.schermata = "app"
     st.session_state.tutorial_attivo = bool(tutorial)
+    st.session_state.linguetta = "gioco"
 
 
 def vai_al_menu():
@@ -165,7 +201,8 @@ CSS_GIOCO = """
 """
 
 # La pagina occupa esattamente lo schermo: nessuno scroll sull'app,
-# scrollano soltanto i due pannelli di conversazione (chat e regia).
+# scrollano soltanto i pannelli di conversazione (chat, regia e il
+# contenuto delle linguette secondarie dentro il proprio spazio).
 CSS_PAGINA_FISSA = """
 <style>
 [data-testid="stMain"] {
@@ -175,33 +212,72 @@ CSS_PAGINA_FISSA = """
 }
 [data-testid="stMainBlockContainer"] {
   flex: 1 1 auto !important; min-height: 0 !important;
-  padding-top: 3.9rem !important; padding-bottom: 0.75rem !important;
+  max-width: 1480px !important;
+  margin-left: auto !important; margin-right: auto !important;
+  padding-bottom: 0.7rem !important;
   overflow: hidden !important;
   display: flex !important; flex-direction: column !important;
 }
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {
   flex: 1 1 auto !important; min-height: 0 !important;
+  gap: 0.4rem !important;
 }
-[data-testid="stTabs"] {
+/* Le righe sopra le colonne (titolo, info, linguette, banner tutorial)
+   non si lasciano schiacciare quando lo spazio manca: lo assorbono solo
+   i pannelli di conversazione. */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"] {
+  flex-shrink: 0 !important;
+}
+
+/* Intestazione della chat: titolo al centro, sotto una riga d'info.
+   Le emoji di Streamlit sono immagini: tenute basse per non far uscire
+   il titolo dalla sua riga e sovrapporsi alle informazioni. */
+.titolo-chat {
+  text-align: center !important;
+  font-size: 1.8rem !important;
+  line-height: 1.25 !important;
+  margin: 0 !important; padding: 0 !important;
+}
+.titolo-chat img {
+  height: 1.1em !important; width: 1.1em !important;
+  vertical-align: -0.12em !important;
+}
+.riga-info {
+  text-align: center !important;
+  font-size: 0.86rem !important;
+  line-height: 1.5 !important;
+  opacity: 0.8;
+  margin: 0 !important;
+}
+.riga-info img {
+  height: 1em !important; width: 1em !important;
+  vertical-align: -0.12em !important;
+}
+/* Streamlit compensa il suo gap di 1rem con un margine negativo sotto
+   ogni markdown; con il gap ridotto a 0.4rem il margine fa sovrapporre
+   il titolo alla riga d'informazioni: annullato su queste due righe. */
+[data-testid="stMarkdown"]:has(.titolo-chat) > div > [data-testid="stMarkdownContainer"],
+[data-testid="stMarkdown"]:has(.riga-info) > div > [data-testid="stMarkdownContainer"] {
+  margin-bottom: 0 !important;
+}
+
+/* Pannello della linguetta attiva (Personaggio, Luoghi): il suo guscio
+   (figlio diretto del blocco pagina) riempie lo spazio restante e dentro
+   il blocco verticale del pannello scrolla. L'ancora #pannello-secondario
+   resta invece un segnaposto basso, altrimenti spingerebbe il contenuto
+   in fondo al pannello. */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:has(#pannello-secondario),
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stLayoutWrapper"]:has(#pannello-secondario) {
   flex: 1 1 auto !important; min-height: 0 !important;
   display: flex !important; flex-direction: column !important;
 }
-[data-testid="stTabs"] > div {
+[data-testid="stVerticalBlock"]:has(#pannello-secondario) {
+  height: auto !important; max-height: none !important;
   flex: 1 1 auto !important; min-height: 0 !important;
-  display: flex !important; flex-direction: column !important;
+  overflow-y: auto !important;
 }
-[data-testid="stTabs"] div[role="tablist"] { flex: 0 0 auto !important; }
-/* Solo il pannello del Gioco diventa flessibile: gli altri pannelli
-   restano nascosti come vuole Streamlit (display:none). */
-[data-testid="stTabPanel"]:has(#fine-chat) {
-  flex: 1 1 auto !important; min-height: 0 !important;
-  display: flex !important; flex-direction: column !important;
-}
-[data-testid="stTabPanel"] > [data-testid="stVerticalBlock"]:has(#fine-chat) {
-  flex: 1 1 auto !important; min-height: 0 !important;
-}
-[data-testid="stLayoutWrapper"]:has(#fine-chat),
-[data-testid="stLayoutWrapper"]:has(#fine-regia),
+
+/* Schermata di gioco: le due colonne (chat e regia) a tutta altezza. */
 [data-testid="stHorizontalBlock"]:has(#fine-chat),
 [data-testid="stHorizontalBlock"]:has(#fine-regia) {
   flex: 1 1 auto !important; min-height: 0 !important;
@@ -217,7 +293,9 @@ CSS_PAGINA_FISSA = """
   flex: 1 1 auto !important; min-height: 0 !important;
 }
 [data-testid="stElementContainer"]:has(#fine-chat),
-[data-testid="stElementContainer"]:has(#fine-regia) {
+[data-testid="stElementContainer"]:has(#fine-regia),
+[data-testid="stLayoutWrapper"]:has(#fine-chat),
+[data-testid="stLayoutWrapper"]:has(#fine-regia) {
   display: flex !important; flex-direction: column !important;
   flex: 1 1 auto !important; min-height: 0 !important;
 }
@@ -328,6 +406,16 @@ def inietta_autoscroll(durata_ms):
     html_js(JS_AUTOSCROLL.replace("DURATA_MS", str(int(durata_ms))), height=0)
 
 
+@contextmanager
+def pannello_scrollabile():
+    """Pannello della linguetta attiva (Personaggio, Luoghi): riempie lo
+    spazio sotto l'intestazione e scrolla dentro di sé; il CSS è agganciato
+    all'ancora #pannello-secondario."""
+    with st.container(border=False):
+        st.markdown('<div id="pannello-secondario"></div>', unsafe_allow_html=True)
+        yield
+
+
 def pannello_proposta_memoria(pid):
     """Carta di conferma per le modifiche alla memoria proposte dalla regia."""
     proposta = st.session_state.get("proposta_memoria")
@@ -435,6 +523,8 @@ if "personaggio_id" not in st.session_state:
     st.session_state.personaggio_id = None
 if "tutorial_attivo" not in st.session_state:
     st.session_state.tutorial_attivo = False
+if "linguetta" not in st.session_state:
+    st.session_state.linguetta = "gioco"
 if "archivista_attivo" not in st.session_state:
     st.session_state.archivista_attivo = True
 if "nome_utente" not in st.session_state:
@@ -614,24 +704,59 @@ def schermata_app():
     scheda = database.carica_scheda(pid)
     memoria_dati = modulo_memoria.normalizza_memoria(database.carica_memoria(pid))
     nome_personaggio = scheda.get("nome", "Personaggio")
+    conversazione = database.carica_conversazione(pid)
+    messaggi = conversazione.get("messaggi", [])
+    dati_indice = database.trova_personaggio(pid) or {}
+    nome_utente_mostrato = st.session_state.nome_utente.strip() or "Tu"
 
-    col_titolo, col_menu = st.columns([5, 1])
-    with col_titolo:
-        st.header("💬 " + nome_personaggio)
-        prima_frase = scheda.get("aspetto") or scheda.get("personalita") or ""
-        if prima_frase:
-            st.caption(prima_frase)
-    with col_menu:
-        st.write("")
+    # --- intestazione: titolo al centro, riga d'informazioni, linguette ---
+    st.markdown(
+        '<h1 class="titolo-chat">💬 '
+        + modulo_html.escape(nome_personaggio)
+        + "</h1>",
+        unsafe_allow_html=True,
+    )
+
+    fiducia = memoria_dati["relazione"]["fiducia"]
+    pezzi_info = []
+    origine = dati_indice.get("origine", "")
+    if etichetta_origine(origine):
+        pezzi_info.append(emoji_origine(origine) + " " + etichetta_origine(origine))
+    if memoria_dati.get("umore"):
+        pezzi_info.append("🧠 umore: " + memoria_dati["umore"])
+    pezzi_info.append(f"🤝 fiducia {fiducia}/100")
+    pezzi_info.append(f"💬 {len(messaggi)} messaggi")
+    pezzi_info.append("🕐 " + formatta_data(dati_indice.get("aggiornato_il")))
+    st.markdown(
+        '<div class="riga-info">'
+        + modulo_html.escape(" · ".join(pezzi_info))
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    # Barra delle linguette: il bottone Menu e le linguette, tutte con la
+    # stessa estetica a bottone; quella attiva è evidenziata.
+    rapporti = [1.0] + [1.05] * len(LINGUETTE_APP) + [4.6]
+    colonne_barra = st.columns(rapporti, gap="small")
+    with colonne_barra[0]:
         if st.button("⬅️ Menu", use_container_width=True, key="bottone_menu_da_app"):
             vai_al_menu()
             st.rerun()
+    for numero, (chiave, etichetta) in enumerate(LINGUETTE_APP, start=1):
+        with colonne_barra[numero]:
+            if st.button(
+                etichetta,
+                use_container_width=True,
+                key=f"linguetta_{chiave}",
+                type="primary" if st.session_state.linguetta == chiave else "secondary",
+            ):
+                st.session_state.linguetta = chiave
+                st.rerun()
 
-    tab_gioco, tab_personaggio, tab_luoghi = st.tabs(
-        ["💬 Gioco", "🪪 Personaggio", "🗺️ Luoghi"]
-    )
+    st.markdown(CSS_GIOCO, unsafe_allow_html=True)
+    st.markdown(CSS_PAGINA_FISSA, unsafe_allow_html=True)
 
-    with tab_gioco:
+    if st.session_state.linguetta == "gioco":
         if st.session_state.tutorial_attivo:
             with st.container(border=True):
                 st.markdown("### 🎓 Benvenuto! Questo è un tutorial di cinque minuti")
@@ -650,13 +775,6 @@ def schermata_app():
                 if st.button("Ho capito, iniziamo!", type="primary", key="bottone_fine_tutorial"):
                     st.session_state.tutorial_attivo = False
                     st.rerun()
-
-        st.markdown(CSS_GIOCO, unsafe_allow_html=True)
-        st.markdown(CSS_PAGINA_FISSA, unsafe_allow_html=True)
-
-        conversazione = database.carica_conversazione(pid)
-        messaggi = conversazione.get("messaggi", [])
-        nome_utente_mostrato = st.session_state.nome_utente.strip() or "Tu"
 
         # Schermo diviso in due: chat a sinistra, regia e selettori a destra.
         colonna_chat, colonna_pannello = st.columns([7, 3], gap="medium")
@@ -791,104 +909,106 @@ def schermata_app():
 
         inietta_autoscroll(6000)
 
-    with tab_personaggio:
-        st.markdown("**Scheda di " + nome_personaggio + "** (fonte canonica del personaggio)")
-        for campo, etichetta in modulo_personaggio.CAMPI_SCHEDA:
-            valore = scheda.get(campo, "")
-            if valore:
-                st.markdown(f"**{etichetta}:** {valore}")
-        with st.expander("✏️ Modifica la scheda"):
-            with st.form("form_modifica_scheda"):
-                nuovi_valori = {}
-                for campo, etichetta in modulo_personaggio.CAMPI_SCHEDA:
-                    nuovi_valori[campo] = st.text_area(
-                        etichetta, value=scheda.get(campo, ""), height=60
+    elif st.session_state.linguetta == "personaggio":
+        with pannello_scrollabile():
+            st.markdown("**Scheda di " + nome_personaggio + "** (fonte canonica del personaggio)")
+            for campo, etichetta in modulo_personaggio.CAMPI_SCHEDA:
+                valore = scheda.get(campo, "")
+                if valore:
+                    st.markdown(f"**{etichetta}:** {valore}")
+            with st.expander("✏️ Modifica la scheda"):
+                with st.form("form_modifica_scheda"):
+                    nuovi_valori = {}
+                    for campo, etichetta in modulo_personaggio.CAMPI_SCHEDA:
+                        nuovi_valori[campo] = st.text_area(
+                            etichetta, value=scheda.get(campo, ""), height=60
+                        )
+                    if st.form_submit_button("Salva scheda", use_container_width=True):
+                        scheda.update(modulo_personaggio.normalizza_scheda(nuovi_valori))
+                        database.salva_scheda(pid, scheda)
+                        st.rerun()
+    
+            st.divider()
+            st.markdown("**🧠 Memoria** (i file JSON aggiornati dall'archivista)")
+            if memoria_dati["umore"]:
+                st.markdown(f"**Umore:** {memoria_dati['umore']}")
+            if memoria_dati["situazione"]:
+                st.markdown(f"**Situazione:** {memoria_dati['situazione']}")
+    
+            fiducia = memoria_dati["relazione"]["fiducia"]
+            st.progress(fiducia / 100, text=f"Fiducia: {fiducia}/100")
+            if memoria_dati["relazione"]["nota"]:
+                st.caption(memoria_dati["relazione"]["nota"])
+    
+            st.markdown("**Ricordi**")
+            if memoria_dati["ricordi"]:
+                for ricordo in sorted(
+                    memoria_dati["ricordi"], key=lambda r: (r["importanza"], r["data"]), reverse=True
+                ):
+                    st.markdown(f"- *[{ricordo['importanza']}/5]* {ricordo['testo']}")
+            else:
+                st.caption("Nessun ricordo per ora: si formano chiacchierando.")
+    
+            colonna_ricordo, colonna_relazione = st.columns(2)
+            with colonna_ricordo:
+                with st.form("form_ricordo_manuale"):
+                    testo_ricordo = st.text_area("Aggiungi un ricordo a mano")
+                    importanza = st.slider("Importanza", 1, 5, 3, key="slider_importanza")
+                    if st.form_submit_button("Salva ricordo", use_container_width=True):
+                        if testo_ricordo.strip():
+                            modulo_memoria.aggiungi_ricordo_manuale(pid, testo_ricordo, importanza)
+                            st.rerun()
+                        else:
+                            st.warning("Scrivi prima il testo del ricordo.")
+            with colonna_relazione:
+                with st.form("form_relazione_manuale"):
+                    delta = st.number_input(
+                        "Variazione fiducia (es. -20 o +20)", min_value=-100, max_value=100,
+                        value=0, step=5,
                     )
-                if st.form_submit_button("Salva scheda", use_container_width=True):
-                    scheda.update(modulo_personaggio.normalizza_scheda(nuovi_valori))
-                    database.salva_scheda(pid, scheda)
+                    nota_relazione = st.text_input(
+                        "Nota sulla relazione (facoltativa)",
+                        value=memoria_dati["relazione"]["nota"],
+                    )
+                    if st.form_submit_button("Aggiorna relazione", use_container_width=True):
+                        if delta:
+                            modulo_memoria.modifica_fiducia_manuale(
+                                pid, int(delta), nota_relazione or None
+                            )
+                            st.rerun()
+    
+            if st.button("↩️ Annulla ultima modifica della memoria", use_container_width=True):
+                if database.annulla_ultima_modifica(pid):
+                    st.rerun()
+                else:
+                    st.info("Non c'è nessuna modifica da annullare.")
+    
+            st.divider()
+            st.markdown("**Manutenzione**")
+            colonna_cron, colonna_elim = st.columns(2)
+            with colonna_cron:
+                if st.button("🧹 Svuota cronologia", use_container_width=True,
+                             help="Cancella i messaggi ma non la memoria."):
+                    database.svuota_conversazione(pid)
+                    st.rerun()
+            with colonna_elim:
+                conferma = st.checkbox("Confermo l'eliminazione", key="conferma_eliminazione")
+                if st.button("🗑️ Elimina personaggio", use_container_width=True,
+                             disabled=not conferma):
+                    database.elimina_personaggio(pid)
+                    vai_al_menu()
                     st.rerun()
 
-        st.divider()
-        st.markdown("**🧠 Memoria** (i file JSON aggiornati dall'archivista)")
-        if memoria_dati["umore"]:
-            st.markdown(f"**Umore:** {memoria_dati['umore']}")
-        if memoria_dati["situazione"]:
-            st.markdown(f"**Situazione:** {memoria_dati['situazione']}")
-
-        fiducia = memoria_dati["relazione"]["fiducia"]
-        st.progress(fiducia / 100, text=f"Fiducia: {fiducia}/100")
-        if memoria_dati["relazione"]["nota"]:
-            st.caption(memoria_dati["relazione"]["nota"])
-
-        st.markdown("**Ricordi**")
-        if memoria_dati["ricordi"]:
-            for ricordo in sorted(
-                memoria_dati["ricordi"], key=lambda r: (r["importanza"], r["data"]), reverse=True
-            ):
-                st.markdown(f"- *[{ricordo['importanza']}/5]* {ricordo['testo']}")
-        else:
-            st.caption("Nessun ricordo per ora: si formano chiacchierando.")
-
-        colonna_ricordo, colonna_relazione = st.columns(2)
-        with colonna_ricordo:
-            with st.form("form_ricordo_manuale"):
-                testo_ricordo = st.text_area("Aggiungi un ricordo a mano")
-                importanza = st.slider("Importanza", 1, 5, 3, key="slider_importanza")
-                if st.form_submit_button("Salva ricordo", use_container_width=True):
-                    if testo_ricordo.strip():
-                        modulo_memoria.aggiungi_ricordo_manuale(pid, testo_ricordo, importanza)
-                        st.rerun()
-                    else:
-                        st.warning("Scrivi prima il testo del ricordo.")
-        with colonna_relazione:
-            with st.form("form_relazione_manuale"):
-                delta = st.number_input(
-                    "Variazione fiducia (es. -20 o +20)", min_value=-100, max_value=100,
-                    value=0, step=5,
-                )
-                nota_relazione = st.text_input(
-                    "Nota sulla relazione (facoltativa)",
-                    value=memoria_dati["relazione"]["nota"],
-                )
-                if st.form_submit_button("Aggiorna relazione", use_container_width=True):
-                    if delta:
-                        modulo_memoria.modifica_fiducia_manuale(
-                            pid, int(delta), nota_relazione or None
-                        )
-                        st.rerun()
-
-        if st.button("↩️ Annulla ultima modifica della memoria", use_container_width=True):
-            if database.annulla_ultima_modifica(pid):
-                st.rerun()
-            else:
-                st.info("Non c'è nessuna modifica da annullare.")
-
-        st.divider()
-        st.markdown("**Manutenzione**")
-        colonna_cron, colonna_elim = st.columns(2)
-        with colonna_cron:
-            if st.button("🧹 Svuota cronologia", use_container_width=True,
-                         help="Cancella i messaggi ma non la memoria."):
-                database.svuota_conversazione(pid)
-                st.rerun()
-        with colonna_elim:
-            conferma = st.checkbox("Confermo l'eliminazione", key="conferma_eliminazione")
-            if st.button("🗑️ Elimina personaggio", use_container_width=True,
-                         disabled=not conferma):
-                database.elimina_personaggio(pid)
-                vai_al_menu()
-                st.rerun()
-
-    with tab_luoghi:
-        st.info(
-            "🚧 **Gestione dei luoghi — in arrivo**\n\n"
-            "Qui potrai definire i posti della vita del personaggio (casa, lavoro, "
-            "i luoghi dove la storia si svolge) e usarli nelle conversazioni. "
-            "È l'idea che nel vecchio LocalStoryEngine era in `world.py`, adattata "
-            "a una chat di personaggi.",
-            icon="🗺️",
-        )
+    else:
+        with pannello_scrollabile():
+            st.info(
+                "🚧 **Gestione dei luoghi — in arrivo**\n\n"
+                "Qui potrai definire i posti della vita del personaggio (casa, lavoro, "
+                "i luoghi dove la storia si svolge) e usarli nelle conversazioni. "
+                "È l'idea che nel vecchio LocalStoryEngine era in `world.py`, adattata "
+                "a una chat di personaggi.",
+                icon="🗺️",
+            )
 
 
 # ---------------------------------------------------------------------------
