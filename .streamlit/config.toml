@@ -1,0 +1,4 @@
+# Tema fisso: la schermata di gioco è disegnata per il tema chiaro
+# (pannello dialogo bianco, pannello regia grigino, fondo pagina grigino).
+[theme]
+base = "light"

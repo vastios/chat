@@ -12,9 +12,10 @@ Organizzazione delle schermate:
           🪪 Personaggio, 🗺️ Luoghi — pronta ad accoglierne di nuove
           (basta aggiungerle a LINGUETTE_APP).
 
-Nella linguetta Gioco lo schermo è diviso in due: a sinistra la chat con
-bolle tonde per i dialoghi e riquadri tratteggiati per le azioni scritte
-in *asterischi*; a destra in alto la 🛠️ Regia, la chat di servizio con la
+Nella linguetta Gioco lo schermo è diviso in due pannelli con cornice
+propria, larghi quanto tutto lo schermo: a sinistra la chat con bolle
+tonde per i dialoghi e riquadri tratteggiati per le azioni scritte in
+*asterischi*; a destra in alto la 🛠️ Regia, la chat di servizio con la
 macchina (nuovi PNG che entrano in scena, uscite, aggiornamenti della
 memoria da confermare), e in basso i selettori (PNG in scena, luoghi…).
 
@@ -177,12 +178,12 @@ def crea_personaggio_demo():
 CSS_GIOCO = """
 <style>
 .chat-bolle { display:flex; flex-direction:column; gap:10px; padding:6px 2px 12px; }
-.chat-bolle .riga { display:flex; flex-direction:column; max-width:82%; }
+.chat-bolle .riga { display:flex; flex-direction:column; max-width:84%; }
 .chat-bolle .riga.destra { align-self:flex-end; align-items:flex-end; }
 .chat-bolle .riga.sinistra { align-self:flex-start; align-items:flex-start; }
 .chat-bolle .riga.centro { align-self:center; align-items:center; max-width:72%; }
 .chat-bolle .autore { font-size:0.72rem; opacity:0.55; margin:0 8px 2px; }
-.chat-bolle .bolla { padding:9px 14px; line-height:1.5; overflow-wrap:break-word; max-width:640px; }
+.chat-bolle .bolla { padding:9px 14px; line-height:1.5; overflow-wrap:break-word; max-width:720px; }
 .chat-bolle .bolla.pg {
   background:rgba(134,142,150,0.15); border:1px solid rgba(134,142,150,0.35);
   border-radius:16px 16px 16px 4px;
@@ -212,9 +213,8 @@ CSS_PAGINA_FISSA = """
 }
 [data-testid="stMainBlockContainer"] {
   flex: 1 1 auto !important; min-height: 0 !important;
-  max-width: 1480px !important;
-  margin-left: auto !important; margin-right: auto !important;
-  padding-bottom: 0.7rem !important;
+  max-width: none !important;
+  padding: 0.5rem 1.1rem 0.7rem !important;
   overflow: hidden !important;
   display: flex !important; flex-direction: column !important;
 }
@@ -310,12 +310,78 @@ CSS_PAGINA_FISSA = """
   flex: 1 1 auto !important; min-height: 0 !important;
   overflow-y: auto !important;
 }
+
+/* ---- Larghezza piena e pannelli nettamente separati ----------------
+   Il contenuto non ha più limiti di larghezza; il fondo della pagina è
+   grigino e le due metà del gioco diventano due pannelli con cornice,
+   fondo e ombra propri: visivamente indipendenti anche su schermi molto
+   larghi. */
+[data-testid="stMain"] { background: #eef0f4 !important; }
+[data-testid="stColumn"]:has(#fine-chat),
+[data-testid="stColumn"]:has(#fine-regia) {
+  box-sizing: border-box !important;
+  border: 1px solid rgba(62,68,80,0.30) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 3px 14px rgba(20,24,32,0.07) !important;
+  padding: 0.7rem 1rem 0.8rem !important;
+}
+[data-testid="stColumn"]:has(#fine-chat) { background: #ffffff !important; }
+[data-testid="stColumn"]:has(#fine-regia) { background: #f4f5f9 !important; }
+
+/* Intestazioni dei pannelli: fisse in cima, non si schiacciano quando
+   lo spazio manca. */
+[data-testid="stElementContainer"]:has(.titolo-pannello) {
+  flex-shrink: 0 !important;
+}
+.titolo-pannello {
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  opacity: 0.72;
+  margin: 0 !important;
+  padding: 0 2px 8px !important;
+}
+.titolo-pannello img {
+  height: 1em !important; width: 1em !important;
+  vertical-align: -0.12em !important;
+}
+
+/* Barra Menu + linguette: centrata sotto il titolo e compatta anche su
+   schermi molto larghi. L'ancora invisibile la identifica nel CSS senza
+   aggiungere spazio tra i bottoni. */
+[data-testid="stHorizontalBlock"]:has(#barra-linguette) {
+  max-width: 800px !important;
+  margin-left: auto !important; margin-right: auto !important;
+}
+[data-testid="stHorizontalBlock"]:has(#barra-linguette) [data-testid="stColumn"] [data-testid="stVerticalBlock"] {
+  gap: 0 !important;
+}
+[data-testid="stMarkdown"]:has(#barra-linguette) > div > [data-testid="stMarkdownContainer"] {
+  margin-bottom: 0 !important;
+}
+
+/* Linguette secondarie (Personaggio, Luoghi): un pannello centrato con
+   la stessa cornice delle metà della schermata di gioco, così ogni parte
+   dell'app ha il suo spazio ben delimitato. Il guscio è il LayoutWrapper
+   del container di pannello_scrollabile(): solo lui contiene l'ancora
+   #pannello-secondario tra i discendenti, il blocco pagina no. */
+[data-testid="stLayoutWrapper"]:has(#pannello-secondario) {
+  box-sizing: border-box !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(62,68,80,0.30) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 3px 14px rgba(20,24,32,0.07) !important;
+  padding: 0.9rem 1.3rem 1.1rem !important;
+  max-width: 1040px !important;
+  margin-left: auto !important; margin-right: auto !important;
+  flex: 1 1 auto !important; min-height: 0 !important;
+  display: flex !important; flex-direction: column !important;
+}
 </style>
 """
 
 CSS_SCHERMI_STRETTI = (
     "<style>[data-testid='stMainBlockContainer'],[data-testid='block-container']"
-    "{max-width:860px;margin-left:auto;margin-right:auto;}</style>"
+    "{max-width:1040px;margin-left:auto;margin-right:auto;}</style>"
 )
 
 JS_AUTOSCROLL = """
@@ -411,7 +477,7 @@ def pannello_scrollabile():
     """Pannello della linguetta attiva (Personaggio, Luoghi): riempie lo
     spazio sotto l'intestazione e scrolla dentro di sé; il CSS è agganciato
     all'ancora #pannello-secondario."""
-    with st.container(border=False):
+    with st.container(border=True):
         st.markdown('<div id="pannello-secondario"></div>', unsafe_allow_html=True)
         yield
 
@@ -736,9 +802,13 @@ def schermata_app():
 
     # Barra delle linguette: il bottone Menu e le linguette, tutte con la
     # stessa estetica a bottone; quella attiva è evidenziata.
-    rapporti = [1.0] + [1.05] * len(LINGUETTE_APP) + [4.6]
+    rapporti = [1.0] + [1.05] * len(LINGUETTE_APP)
     colonne_barra = st.columns(rapporti, gap="small")
     with colonne_barra[0]:
+        # Ancora invisibile: identifica la barra nel CSS (centrata e
+        # compatta) senza aggiungere spazio tra i bottoni.
+        st.markdown('<span id="barra-linguette" style="display:none"></span>',
+                    unsafe_allow_html=True)
         if st.button("⬅️ Menu", use_container_width=True, key="bottone_menu_da_app"):
             vai_al_menu()
             st.rerun()
@@ -776,10 +846,13 @@ def schermata_app():
                     st.session_state.tutorial_attivo = False
                     st.rerun()
 
-        # Schermo diviso in due: chat a sinistra, regia e selettori a destra.
-        colonna_chat, colonna_pannello = st.columns([7, 3], gap="medium")
+        # Schermo diviso in due pannelli ben separati: chat a sinistra,
+        # regia e selettori a destra.
+        colonna_chat, colonna_pannello = st.columns([3, 1], gap="large")
 
         with colonna_chat:
+            st.markdown('<div class="titolo-pannello">💬 Dialogo</div>',
+                        unsafe_allow_html=True)
             with st.container(height=540, border=False):
                 if not messaggi:
                     st.caption("Nessun messaggio: rompi il ghiaccio con una prima frase.")
@@ -794,8 +867,9 @@ def schermata_app():
         with colonna_pannello:
             # In alto: la regia, la linea diretta con la macchina fuori dal gioco.
             storico_regia = database.carica_regia(pid)
+            st.markdown('<div class="titolo-pannello">🛠️ Regia</div>',
+                        unsafe_allow_html=True)
             with st.container(height=430, border=True):
-                st.markdown("**🛠️ Regia**")
                 st.caption(
                     "Comunicazioni di servizio: far arrivare un nuovo PNG, "
                     "un'uscita di scena, aggiornamenti della memoria da confermare…"
@@ -824,8 +898,9 @@ def schermata_app():
                 )
 
             # In basso: i selettori.
+            st.markdown('<div class="titolo-pannello">🎛️ Selettori</div>',
+                        unsafe_allow_html=True)
             with st.container(border=True):
-                st.markdown("**🎛️ Selettori**")
                 opzioni_png = [
                     (p["nome"], p["id"]) for p in database.lista_personaggi()
                 ]

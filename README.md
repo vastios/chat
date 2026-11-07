@@ -13,7 +13,7 @@ Tutto gira sul tuo computer: **Python + Streamlit + LM Studio**. Nessun dato esc
 
 | Vecchio progetto (RPG) | Nuovo progetto (chat personaggi) |
 |---|---|
-| `app.py` — interfaccia Streamlit | `app.py` — interfaccia Streamlit (menu iniziale + linguette Gioco/Personaggio/Luoghi; gioco diviso: chat a bolle a sinistra, regia e selettori a destra) |
+| `app.py` — interfaccia Streamlit | `app.py` — interfaccia Streamlit (menu iniziale + linguette Gioco/Personaggio/Luoghi; gioco a larghezza piena: pannello dialogo a sinistra, pannello regia e selettori a destra) |
 | `config.py` — percorsi e prompt | `config.py` — percorsi, modelli e prompt |
 | `game/database.py` — SQLite | `personaggi/database.py` — **archivio JSON** |
 | `game/character.py` + `npcs.py` — scheda RPG e PNG | `personaggi/personaggio.py` — scheda identità del personaggio |
@@ -77,18 +77,22 @@ streamlit run app.py
    campo per campo, includendo il segreto che non riveleranno facilmente.
 3. **Chiacchiera** nella linguetta **💬 Gioco**: la pagina resta **fissa alle
    dimensioni dello schermo** e si muovono solo le conversazioni. Lo schermo
-   è diviso in due. A sinistra la chat: le battute parlate diventano **bolle
-   tonde** (azzurre per te, grigie per il personaggio), le azioni scritte in
-   *asterischi* restano in corsivo dentro la bolla, i messaggi di sole azioni
-   diventano **riquadri tratteggiati** al centro. Il personaggio risponde in
+   è diviso in **due pannelli con cornice e fondo propri, larghi quanto tutto
+   lo schermo** — chiaramente separati anche sui monitor più grandi. A
+   sinistra la chat: le battute parlate diventano **bolle tonde** (azzurre
+   per te, grigie per il personaggio), le azioni scritte in *asterischi*
+   restano in corsivo dentro la bolla, i messaggi di sole azioni diventano
+   **riquadri tratteggiati** al centro. Il personaggio risponde in
    streaming, coerente con scheda e memoria.
 4. **In alto, l'intestazione della chat**: il **titolo al centro** (nome del
    personaggio), subito sotto una **riga d'informazioni sempre aggiornata** —
    origine, umore, fiducia, numero di messaggi, ultimo scambio — e ancora
-   sotto la **barra delle linguette a bottone**: **⬅️ Menu**, **💬 Gioco**,
-   **🪪 Personaggio**, **🗺️ Luoghi**, tutte con la stessa estetica e quella
-   attiva evidenziata. Aggiungerne una nuova è una riga in `LINGUETTE_APP`.
-5. **Comandi di servizio** nella **🛠️ Regia** (in alto a destra): parli con
+   sotto la **barra delle linguette a bottone, centrata e compatta**:
+   **⬅️ Menu**, **💬 Gioco**, **🪪 Personaggio**, **🗺️ Luoghi**, tutte con la
+   stessa estetica e quella attiva evidenziata. Aggiungerne una nuova è una
+   riga in `LINGUETTE_APP`.
+5. **Comandi di servizio** nella **🛠️ Regia** (pannello di destra, il titolo
+   resta fisso in cima anche mentre i messaggi scorrono): parli con
    la macchina, fuori dal gioco. Puoi far **arrivare un nuovo PNG** in scena
    (lo compone e lo aggiunge ai selettori), segnalare che qualcuno **esce di
    scena**, chiedere aggiornamenti alla memoria — la macchina prepara la
